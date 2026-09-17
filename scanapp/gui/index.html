@@ -244,9 +244,9 @@ function renderResult(res) {
   if (res.error) { detail.innerText = 'Error: ' + res.error; return; }
 
   const g = res.gate || {};
-  document.getElementById('v-still').innerText = g.is_still ? 'yes' : 'no';
-  document.getElementById('v-sharp').innerText = g.is_sharp ? 'yes' : 'no';
-  document.getElementById('v-object').innerText = g.has_object ? 'yes' : 'no';
+  document.getElementById('v-still').innerText = (g.is_still ? 'yes' : 'no') + ` (${g.motion?.toFixed(1)})`;
+  document.getElementById('v-sharp').innerText = (g.is_sharp ? 'yes' : 'no') + ` (${g.blur_var?.toFixed(1)})`;
+  document.getElementById('v-object').innerText = (g.has_object ? 'yes' : 'no') + ` (${g.edge_density?.toFixed(3)})`;
   document.getElementById('v-ready').innerText = g.ready ? 'READY' : (g.stable_count ?? 0) + '/3';
   setChip('chip-still', !!g.is_still);
   setChip('chip-sharp', !!g.is_sharp);

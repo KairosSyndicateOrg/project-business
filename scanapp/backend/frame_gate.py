@@ -29,8 +29,12 @@ class FrameGate:
         self._stable_count = 0
 
     def _motion_diff(self, gray):
-        if self._prev_gray is None:
-            return float("inf")
+        if self._prev_gray is None or self._prev_gray.shape != gray.shape:
+            # No previous frame yet, or its size doesn't match this one
+            # (camera resolution can renegotiate between frames) — treat
+            # as maximum diff rather than crashing cv2.absdiff on a shape
+            # mismatch.
+            return 255.0
         diff = cv2.absdiff(gray, self._prev_gray)
         return float(np.mean(diff))
 
@@ -51,6 +55,11 @@ class FrameGate:
         'ready': bool indicating whether the frame should be pushed into
         the full scan pipeline (§2).
         """
+        # Normalize to a fixed size first: the incoming frame's resolution
+        # can drift slightly between calls (camera renegotiation, canvas
+        # resize), and the motion-diff step requires two frames of
+        # identical shape.
+        frame_bgr = cv2.resize(frame_bgr, (320, 240))
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
         gray = cv2.GaussianBlur(gray, (5, 5), 0)
 

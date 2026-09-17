@@ -25,7 +25,7 @@ THRESHOLDS = {
 # --- Frame-readiness gate (§6.1) ---
 FRAME_GATE = {
     "motion_diff_threshold": 8.0,      # mean abs pixel diff considered "still"
-    "blur_var_threshold": 60.0,        # Laplacian variance below this = too blurry
+    "blur_var_threshold": 20.0,        # Laplacian variance below this = too blurry (tune per-camera; see GUI readout)
     "min_edge_density": 0.02,          # fraction of edge pixels needed to consider "object present"
     "stability_frames_required": 3,    # consecutive stable frames before firing pipeline
 }

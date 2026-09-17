@@ -158,10 +158,10 @@ def all_reference_vectors():
 
 
 def reference_ocr_texts():
-    """Returns list of (product_id, ocr_text_raw) used for fuzzy-name matching (§3.2)."""
+    """Returns product dicts (id, name, brand) used for fuzzy-name matching (§3.2)."""
     with cursor() as cur:
         cur.execute(
-            "SELECT DISTINCT p.id as product_id, p.name, p.brand "
+            "SELECT DISTINCT p.id as id, p.name, p.brand "
             "FROM product p"
         )
         return [dict(r) for r in cur.fetchall()]

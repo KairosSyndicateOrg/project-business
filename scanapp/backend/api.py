@@ -83,7 +83,10 @@ def _jsonable(obj):
     if isinstance(obj, (list, tuple)):
         return [_jsonable(v) for v in obj]
     if isinstance(obj, (np.floating,)):
-        return float(obj)
+        obj = float(obj)
     if isinstance(obj, (np.integer,)):
         return int(obj)
+    if isinstance(obj, float) and (obj != obj or obj in (float("inf"), float("-inf"))):
+        # NaN/Infinity are not valid JSON and break pywebview's JS bridge.
+        return None
     return obj

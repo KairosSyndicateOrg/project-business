@@ -14,18 +14,49 @@ per §10.3).
 """
 
 import re
+import shutil
 import pytesseract
 from rapidfuzz import fuzz, process
 
 UNIT_TOKENS = re.compile(r"\b\d+(\.\d+)?\s?(g|kg|ml|l|pcs|pack)\b", re.IGNORECASE)
+
+# Cache the availability check once — probing the binary on every frame is
+# both wasteful and (via subprocess) the slowest part of the hot path.
+_TESSERACT_AVAILABLE = None
+_WARNED = False
+
+
+def _tesseract_available():
+    global _TESSERACT_AVAILABLE, _WARNED
+    if _TESSERACT_AVAILABLE is None:
+        _TESSERACT_AVAILABLE = shutil.which(pytesseract.pytesseract.tesseract_cmd) is not None \
+            or shutil.which("tesseract") is not None
+    if not _TESSERACT_AVAILABLE and not _WARNED:
+        _WARNED = True
+        print(
+            "[ocr_extractor] Tesseract binary not found on PATH — OCR step will be "
+            "skipped (fusion score falls back to embedding-only). Install it:\n"
+            "  Windows: https://github.com/UB-Mannheim/tesseract/wiki, then either add "
+            "the install dir to PATH or set pytesseract.pytesseract.tesseract_cmd.\n"
+            "  macOS:   brew install tesseract\n"
+            "  Linux:   sudo apt-get install tesseract-ocr"
+        )
+    return _TESSERACT_AVAILABLE
 
 
 def extract_text_blocks(frame_bgr):
     """
     Returns list of dicts: {text, conf, bbox: (x, y, w, h)}
     Mirrors the spec's "raw text blocks + bounding boxes + per-block confidence".
+    Returns [] (never raises) if the Tesseract binary isn't installed, so the
+    rest of the pipeline (embedding + fusion) still runs.
     """
-    data = pytesseract.image_to_data(frame_bgr, output_type=pytesseract.Output.DICT)
+    if not _tesseract_available():
+        return []
+    try:
+        data = pytesseract.image_to_data(frame_bgr, output_type=pytesseract.Output.DICT)
+    except pytesseract.TesseractNotFoundError:
+        return []
     blocks = []
     for i, text in enumerate(data["text"]):
         text = text.strip()
