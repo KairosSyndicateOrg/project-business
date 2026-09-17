@@ -1,0 +1,5 @@
+opencv-python-headless
+pywebview
+pytesseract
+rapidfuzz
+numpy

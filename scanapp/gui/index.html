@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Scan Architecture Prototype</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --border: #2a2f3a;
+    --text: #e6e8ee;
+    --text-dim: #8b93a3;
+    --accent: #4f8cff;
+    --green: #37c978;
+    --amber: #f2b84b;
+    --red: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden;
+  }
+  .col { display: flex; flex-direction: column; }
+  #left { width: 62%; padding: 16px; gap: 12px; }
+  #right { width: 38%; padding: 16px; gap: 12px; border-left: 1px solid var(--border); overflow-y: auto; }
+
+  h1 { font-size: 15px; margin: 0 0 4px; letter-spacing: 0.3px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-dim); margin: 0 0 8px; }
+  .sub { color: var(--text-dim); font-size: 12px; margin-bottom: 10px; }
+
+  .camera-wrap { position: relative; border-radius: 12px; overflow: hidden; background: #000; border: 1px solid var(--border); }
+  video, canvas.overlay { width: 100%; display: block; }
+  canvas.overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  .gate-strip { display: flex; gap: 8px; margin-top: 10px; }
+  .gate-chip {
+    flex: 1; padding: 8px 10px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); font-size: 11px; color: var(--text-dim);
+  }
+  .gate-chip.ok { color: var(--green); border-color: rgba(55,201,120,0.4); }
+  .gate-chip.bad { color: var(--red); border-color: rgba(242,85,90,0.4); }
+  .gate-chip b { display: block; color: inherit; font-size: 13px; }
+
+  .stage-track { display: flex; gap: 6px; margin-top: 10px; }
+  .stage {
+    flex: 1; text-align: center; padding: 8px 4px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); font-size: 11px; color: var(--text-dim);
+  }
+  .stage.active { border-color: var(--accent); color: var(--accent); }
+  .stage.done { border-color: var(--green); color: var(--green); }
+  .stage.skip { opacity: 0.35; }
+
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--panel-2); border: 1px solid var(--green); color: var(--text);
+    padding: 10px 18px; border-radius: 999px; font-size: 13px; opacity: 0; transition: all .2s ease;
+    display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.4); z-index: 50;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+  .sheet {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none;
+    align-items: flex-end; justify-content: center; z-index: 60;
+  }
+  .sheet.show { display: flex; }
+  .sheet-inner {
+    background: var(--panel); width: 100%; max-width: 640px; border-radius: 16px 16px 0 0;
+    padding: 18px; border: 1px solid var(--border); border-bottom: none;
+  }
+  .cand-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px; border-radius: 10px; background: var(--panel-2); margin-bottom: 8px; cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .cand-row:hover { border-color: var(--accent); }
+  .cand-score { color: var(--text-dim); font-size: 12px; }
+  .btn {
+    background: var(--accent); color: white; border: none; border-radius: 8px; padding: 9px 14px;
+    font-size: 13px; cursor: pointer;
+  }
+  .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .btn.block { width: 100%; margin-top: 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+  th { color: var(--text); font-weight: 600; }
+
+  input, select {
+    width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--text); font-size: 12px; margin-bottom: 6px;
+  }
+  label { font-size: 11px; color: var(--text-dim); }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); }
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .small { font-size: 11px; color: var(--text-dim); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+</head>
+<body>
+
+<div id="left" class="col">
+  <div>
+    <h1>Continuous Scan (§6)</h1>
+    <div class="sub">Camera stays live. Frames pass a readiness gate before the QR → OCR/embedding → fusion cascade fires.</div>
+  </div>
+
+  <div class="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay" class="overlay"></canvas>
+  </div>
+
+  <div class="gate-strip">
+    <div class="gate-chip" id="chip-still">Stable<b id="v-still">—</b></div>
+    <div class="gate-chip" id="chip-sharp">Sharp<b id="v-sharp">—</b></div>
+    <div class="gate-chip" id="chip-object">Object<b id="v-object">—</b></div>
+    <div class="gate-chip" id="chip-ready">Gate<b id="v-ready">—</b></div>
+  </div>
+
+  <div class="stage-track">
+    <div class="stage" id="s-qr">1. QR Detect</div>
+    <div class="stage" id="s-ocr">2. OCR</div>
+    <div class="stage" id="s-emb">3. Embedding</div>
+    <div class="stage" id="s-fuse">4. Fusion</div>
+  </div>
+
+  <div class="panel">
+    <h2>Last Pipeline Result</h2>
+    <div id="result-detail" class="small mono">No frame processed yet.</div>
+  </div>
+</div>
+
+<div id="right" class="col">
+  <div class="panel">
+    <h2>Register Product + Reference Image (§3.3 / §4)</h2>
+    <label>Name</label>
+    <input id="p-name" placeholder="e.g. Parle-G Biscuits 100g" />
+    <div class="row">
+      <div><label>Brand</label><input id="p-brand" placeholder="Parle" /></div>
+      <div><label>Size / Variant</label><input id="p-size" placeholder="100g" /></div>
+    </div>
+    <label><input id="p-qr" type="checkbox" style="width:auto; margin-right:6px;" />QR-enabled</label>
+    <button class="btn block" onclick="createProduct()">Create Product</button>
+    <div class="divider"></div>
+    <label>Capture reference image for</label>
+    <select id="ref-product"></select>
+    <div class="row">
+      <div><label>Angle</label>
+        <select id="ref-angle">
+          <option>front</option><option>back</option><option>left</option><option>right</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn secondary block" onclick="captureReference()">Capture Current Frame as Reference</button>
+    <div id="ref-status" class="small" style="margin-top:6px;"></div>
+  </div>
+
+  <div class="panel" style="margin-top:12px;">
+    <h2>Products</h2>
+    <table id="product-table">
+      <thead><tr><th>Name</th><th>Brand</th><th>Stock</th><th>QR</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="panel" style="margin-top:12px;">
+    <h2>Recent Scan Log (§4 ScanLog)</h2>
+    <table id="log-table">
+      <thead><tr><th>Time</th><th>Path</th><th>Score</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="toast"><span class="dot"></span><span id="toast-text"></span></div>
+
+<div class="sheet" id="candidate-sheet">
+  <div class="sheet-inner">
+    <h2>Top Candidates — one tap to confirm</h2>
+    <div id="candidate-list"></div>
+    <button class="btn secondary block" onclick="closeSheet()">None of these — manual picker</button>
+  </div>
+</div>
+
+<script>
+let video, overlay, ctx;
+let capturing = true;
+let sheetOpen = false;
+let productsCache = [];
+
+async function initCamera() {
+  video = document.getElementById('video');
+  overlay = document.getElementById('overlay');
+  ctx = overlay.getContext('2d');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+  } catch (e) {
+    document.getElementById('result-detail').innerText = 'Camera unavailable: ' + e.message +
+      '\n(This prototype needs a webcam-capable environment; the pipeline logic itself is camera-agnostic.)';
+  }
+}
+
+function captureFrameB64() {
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth || 640;
+  c.height = video.videoHeight || 480;
+  if (c.width === 0) return null;
+  const cctx = c.getContext('2d');
+  cctx.drawImage(video, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+
+function setChip(id, ok) {
+  const el = document.getElementById(id);
+  el.classList.remove('ok', 'bad');
+  el.classList.add(ok ? 'ok' : 'bad');
+}
+
+function resetStages() {
+  ['s-qr', 's-ocr', 's-emb', 's-fuse'].forEach(id => {
+    document.getElementById(id).classList.remove('active', 'done', 'skip');
+  });
+}
+
+async function tick() {
+  if (!capturing || sheetOpen) { setTimeout(tick, 350); return; }
+  const frame = captureFrameB64();
+  if (!frame) { setTimeout(tick, 350); return; }
+
+  resetStages();
+  const res = await pywebview.api.process_frame(frame);
+  renderResult(res);
+  setTimeout(tick, 350);
+}
+
+function renderResult(res) {
+  const detail = document.getElementById('result-detail');
+  if (res.error) { detail.innerText = 'Error: ' + res.error; return; }
+
+  const g = res.gate || {};
+  document.getElementById('v-still').innerText = g.is_still ? 'yes' : 'no';
+  document.getElementById('v-sharp').innerText = g.is_sharp ? 'yes' : 'no';
+  document.getElementById('v-object').innerText = g.has_object ? 'yes' : 'no';
+  document.getElementById('v-ready').innerText = g.ready ? 'READY' : (g.stable_count ?? 0) + '/3';
+  setChip('chip-still', !!g.is_still);
+  setChip('chip-sharp', !!g.is_sharp);
+  setChip('chip-object', !!g.has_object);
+  setChip('chip-ready', !!g.ready);
+
+  if (res.stage === 'gate') {
+    detail.innerText = 'Gate not satisfied — pipeline not invoked this frame.';
+    return;
+  }
+
+  document.getElementById('s-qr').classList.add(res.stage === 'qr' ? 'done' : 'skip');
+
+  if (res.stage === 'qr') {
+    ['s-ocr', 's-emb', 's-fuse'].forEach(id => document.getElementById(id).classList.add('skip'));
+  } else {
+    ['s-ocr', 's-emb', 's-fuse'].forEach(id => document.getElementById(id).classList.add('done'));
+  }
+
+  if (res.outcome === 'auto_confirm') {
+    showToast(`✓ ${res.product.name} — auto-confirmed (score ${res.score?.toFixed(2)})`);
+    refreshProducts();
+    refreshLogs();
+    detail.innerText = `AUTO_CONFIRM via ${res.stage}\nproduct: ${res.product.name}\nscore: ${(res.score ?? 1).toFixed(3)}`;
+  } else if (res.outcome === 'show_candidates') {
+    detail.innerText = `SHOW_CANDIDATES\nocr_match: ${res.ocr_match_id || 'none'} (${(res.ocr_confidence||0).toFixed(2)})\nbest_score: ${res.score.toFixed(3)}`;
+    openCandidateSheet(res.candidates);
+  } else if (res.outcome === 'manual') {
+    detail.innerText = `MANUAL — best_score ${res.score?.toFixed(3) ?? '0.000'} below candidate_threshold. Offer 'add as new product'.`;
+  } else if (res.outcome === 'debounced') {
+    detail.innerText = `Debounced — ${res.product?.name || ''} already confirmed within cooldown window.`;
+  } else {
+    detail.innerText = JSON.stringify(res, null, 2);
+  }
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').innerText = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function openCandidateSheet(candidates) {
+  sheetOpen = true;
+  const list = document.getElementById('candidate-list');
+  list.innerHTML = '';
+  (candidates || []).forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'cand-row';
+    row.innerHTML = `<span>${c.name}</span><span class="cand-score">score ${c.score.toFixed(2)}</span>`;
+    row.onclick = async () => {
+      await pywebview.api.confirm_candidate(c.id, c.score);
+      showToast(`✓ ${c.name} confirmed`);
+      closeSheet();
+      refreshProducts();
+      refreshLogs();
+    };
+    list.appendChild(row);
+  });
+  document.getElementById('candidate-sheet').classList.add('show');
+}
+
+function closeSheet() {
+  sheetOpen = false;
+  document.getElementById('candidate-sheet').classList.remove('show');
+}
+
+async function createProduct() {
+  const name = document.getElementById('p-name').value.trim();
+  if (!name) return;
+  const brand = document.getElementById('p-brand').value.trim();
+  const size = document.getElementById('p-size').value.trim();
+  const qr = document.getElementById('p-qr').checked;
+  await pywebview.api.add_product(name, brand, size, qr);
+  document.getElementById('p-name').value = '';
+  document.getElementById('p-brand').value = '';
+  document.getElementById('p-size').value = '';
+  await refreshProducts();
+}
+
+async function captureReference() {
+  const pid = document.getElementById('ref-product').value;
+  const angle = document.getElementById('ref-angle').value;
+  if (!pid) { document.getElementById('ref-status').innerText = 'Create a product first.'; return; }
+  const frame = captureFrameB64();
+  const res = await pywebview.api.add_reference_image(pid, angle, frame);
+  document.getElementById('ref-status').innerText = res.ok ? `Saved ${angle} reference.` : ('Error: ' + res.error);
+}
+
+async function refreshProducts() {
+  const products = await pywebview.api.list_products();
+  productsCache = products;
+  const tbody = document.querySelector('#product-table tbody');
+  tbody.innerHTML = '';
+  const select = document.getElementById('ref-product');
+  select.innerHTML = '';
+  products.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.name}</td><td>${p.brand||''}</td><td>${p.stock_qty}</td><td>${p.qr_enabled ? '✓' : ''}</td>`;
+    tbody.appendChild(tr);
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.innerText = p.name;
+    select.appendChild(opt);
+  });
+}
+
+async function refreshLogs() {
+  const logs = await pywebview.api.recent_scans();
+  const tbody = document.querySelector('#log-table tbody');
+  tbody.innerHTML = '';
+  logs.forEach(l => {
+    const tr = document.createElement('tr');
+    const t = new Date(l.timestamp * 1000).toLocaleTimeString();
+    tr.innerHTML = `<td>${t}</td><td><span class="pill">${l.match_path}</span></td><td>${(l.final_score||0).toFixed(2)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+window.addEventListener('pywebviewready', async () => {
+  await initCamera();
+  await refreshProducts();
+  await refreshLogs();
+  tick();
+});
+</script>
+</body>
+</html>
