@@ -267,12 +267,14 @@ function renderResult(res) {
   }
 
   if (res.outcome === 'auto_confirm') {
-    showToast(`✓ ${res.product.name} — auto-confirmed (score ${res.score?.toFixed(2)})`);
+    const exactTag = res.ocr_is_exact ? ' — OCR exact match' : '';
+    showToast(`✓ ${res.product.name} — auto-confirmed (score ${res.score?.toFixed(2)})${exactTag}`);
     refreshProducts();
     refreshLogs();
-    detail.innerText = `AUTO_CONFIRM via ${res.stage}\nproduct: ${res.product.name}\nscore: ${(res.score ?? 1).toFixed(3)}`;
+    detail.innerText = `AUTO_CONFIRM via ${res.stage}\nproduct: ${res.product.name}\nscore: ${(res.score ?? 1).toFixed(3)}${exactTag}`;
   } else if (res.outcome === 'show_candidates') {
-    detail.innerText = `SHOW_CANDIDATES\nocr_match: ${res.ocr_match_id || 'none'} (${(res.ocr_confidence||0).toFixed(2)})\nbest_score: ${res.score.toFixed(3)}`;
+    const exactTag = res.ocr_is_exact ? ' [OCR EXACT]' : '';
+    detail.innerText = `SHOW_CANDIDATES\nocr_match: ${res.ocr_match_id || 'none'} (${(res.ocr_confidence||0).toFixed(2)})${exactTag}\nbest_score: ${res.score.toFixed(3)}`;
     openCandidateSheet(res.candidates);
   } else if (res.outcome === 'manual') {
     detail.innerText = `MANUAL — best_score ${res.score?.toFixed(3) ?? '0.000'} below candidate_threshold. Offer 'add as new product'.`;

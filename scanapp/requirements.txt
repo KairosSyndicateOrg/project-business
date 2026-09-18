@@ -3,3 +3,5 @@ pywebview
 pytesseract
 rapidfuzz
 numpy
+zxing-cpp       # barcode/QR decoding — pure pip install, native ZXing-C++ decoder is statically bundled in the wheel (no system zbar/etc. needed)
+python-dotenv

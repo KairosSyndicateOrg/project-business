@@ -1,0 +1,1773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Kairos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<style>
+  :root {
+    --peach-bg: #FBEAD9;
+    --peach-bg-deep: #F5DCC5;
+    --surface: #FFFFFF;
+    --surface-soft: #FFF6EE;
+    --ink: #2E2620;
+    --ink-soft: #8A7A6B;
+    --ink-faint: #B7A695;
+    --line: #EFDCC8;
+    --accent: #B5642F;
+    --accent-ink: #FFF8F1;
+    --accent-soft: #F0CFAE;
+    --accent-wash: #FBE6D3;
+    --sage: #6F8863;
+    --sage-soft: #DCE6D3;
+    --sage-wash: #EEF3E9;
+    --danger: #B04A3A;
+    --danger-soft: #F3DAD3;
+    --r-xl: 28px;
+    --r-lg: 22px;
+    --r-md: 16px;
+    --r-sm: 12px;
+    --r-pill: 999px;
+    --shadow-soft: 0 12px 28px -16px rgba(181, 100, 47, 0.28);
+    --shadow-card: 0 6px 18px -12px rgba(181, 100, 47, 0.18);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Manrope', -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--peach-bg-deep);
+    color: var(--ink);
+    overscroll-behavior: none;
+  }
+  button, input, textarea { font-family: inherit; }
+  ::selection { background: var(--accent-soft); }
+
+  #shell {
+    max-width: 480px;
+    margin: 0 auto;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--peach-bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header.page-head {
+    padding: 22px 22px 14px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header.page-head h1 {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header.page-head .head-sub {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .head-action {
+    width: 40px; height: 40px; border-radius: var(--r-pill);
+    background: var(--surface); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink); cursor: pointer; flex-shrink: 0;
+  }
+  .head-action:active { background: var(--surface-soft); }
+
+  main { flex: 1; overflow-y: auto; padding: 0 18px 110px; -webkit-overflow-scrolling: touch; }
+  .panel { display: none; animation: fade-in .22s ease; }
+  .panel.active { display: block; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- shared card / list styles ---------- */
+  .card {
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 700; color: var(--ink-soft);
+    margin: 0 0 12px;
+  }
+  .row-between { display: flex; align-items: center; justify-content: space-between; }
+  .pill-btn {
+    border: none; border-radius: var(--r-pill); padding: 11px 20px;
+    font-weight: 700; font-size: 14px; cursor: pointer; background: var(--accent); color: var(--accent-ink);
+  }
+  .pill-btn:active { transform: scale(0.97); }
+  .pill-btn.secondary { background: var(--surface-soft); color: var(--ink); border: 1px solid var(--line); }
+  .pill-btn.sage { background: var(--sage); color: #fff; }
+  .pill-btn.block { width: 100%; text-align: center; }
+  .pill-btn.danger { background: var(--danger-soft); color: var(--danger); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: var(--r-pill);
+  }
+  .badge.ok { background: var(--sage-wash); color: var(--sage); }
+  .badge.low { background: var(--danger-soft); color: var(--danger); }
+  .badge.neutral { background: var(--accent-wash); color: var(--accent); }
+
+  /* ================= ANALYTICS ================= */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .stat-card {
+    background: var(--surface); border-radius: var(--r-lg); padding: 16px;
+    box-shadow: var(--shadow-card);
+  }
+  .stat-card .label { font-size: 12px; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
+  .stat-card .value { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-card .delta { font-size: 12px; font-weight: 700; margin-top: 4px; }
+  .stat-card .delta.up { color: var(--sage); }
+  .stat-card .delta.down { color: var(--danger); }
+
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; gap: 16px; margin-top: 10px; }
+  .chart-legend span { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  .top-item-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .top-item-row:last-child { border-bottom: none; }
+  .top-item-rank {
+    width: 26px; height: 26px; border-radius: 8px; background: var(--peach-bg-deep);
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--accent);
+    flex-shrink: 0;
+  }
+  .top-item-name { font-weight: 700; font-size: 14px; flex: 1; }
+  .top-item-sub { font-size: 12px; color: var(--ink-soft); }
+  .top-item-value { font-weight: 800; font-size: 14px; }
+
+  .coming-soon-note {
+    display: flex; gap: 10px; align-items: flex-start; padding: 14px;
+    background: var(--accent-wash); border-radius: var(--r-md); margin-bottom: 14px;
+  }
+  .coming-soon-note p { margin: 0; font-size: 12.5px; color: var(--ink); font-weight: 600; line-height: 1.5; }
+  .coming-soon-note svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* ================= INVENTORY ================= */
+  .sales-strip {
+    display: flex; background: var(--surface); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-card); margin-bottom: 16px; overflow: hidden;
+  }
+  .sales-strip .seg { flex: 1; padding: 14px 12px; text-align: center; }
+  .sales-strip .seg + .seg { border-left: 1px solid var(--line); }
+  .sales-strip .seg .n { font-size: 18px; font-weight: 800; }
+  .sales-strip .seg .l { font-size: 11px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; }
+
+  .search-add-row { display: flex; gap: 10px; margin-bottom: 14px; }
+  .search-box {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border-radius: var(--r-pill); padding: 10px 16px;
+    box-shadow: var(--shadow-card);
+  }
+  .search-box input { border: none; outline: none; background: transparent; flex: 1; font-size: 14px; color: var(--ink); font-weight: 600; }
+  .search-box input::placeholder { color: var(--ink-faint); font-weight: 500; }
+  .fab-add {
+    width: 44px; height: 44px; border-radius: var(--r-pill); background: var(--accent);
+    color: var(--accent-ink); border: none; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow-soft); flex-shrink: 0; cursor: pointer;
+  }
+  .fab-add:active { transform: scale(0.94); }
+
+  .inv-item {
+    background: var(--surface); border-radius: var(--r-lg); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-card); margin-bottom: 10px;
+  }
+  .inv-thumb {
+    width: 46px; height: 46px; border-radius: var(--r-md); background: var(--peach-bg-deep);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); font-weight: 800; font-size: 16px;
+  }
+  .inv-info { flex: 1; min-width: 0; }
+  .inv-name { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inv-sub { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
+  .inv-right { text-align: right; flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+  .inv-right .inv-meta { text-align: right; }
+  .inv-delete-btn {
+    width: 32px; height: 32px; border-radius: var(--r-pill); border: none; background: var(--danger-soft);
+    color: var(--danger); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .inv-delete-btn:active { transform: scale(0.92); }
+  .inv-price { font-weight: 800; font-size: 15px; }
+  .inv-stock { margin-top: 4px; }
+
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--ink-soft); }
+  .empty-state svg { margin-bottom: 12px; opacity: 0.6; }
+  .empty-state p { font-size: 13.5px; font-weight: 600; margin: 0; }
+
+  /* bottom sheet */
+  .sheet-overlay {
+    position: absolute; inset: 0; background: rgba(46, 38, 32, 0.4);
+    display: none; align-items: flex-end; z-index: 40;
+  }
+  .sheet-overlay.show { display: flex; }
+  .sheet {
+    width: 100%; background: var(--peach-bg); border-radius: 28px 28px 0 0;
+    padding: 10px 22px 26px; max-height: 86%; overflow-y: auto;
+    animation: sheet-up .25s ease;
+  }
+  @keyframes sheet-up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+  .sheet-handle { width: 36px; height: 4px; background: var(--line); border-radius: var(--r-pill); margin: 8px auto 16px; }
+  .sheet h2 { font-size: 18px; font-weight: 800; margin: 0 0 16px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line); background: var(--surface);
+    border-radius: var(--r-md); padding: 12px 14px; font-size: 14.5px; color: var(--ink); font-weight: 600; outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .barcode-field-row { display: flex; gap: 8px; align-items: center; }
+  .barcode-field-row input { flex: 1; }
+  .barcode-scan-btn {
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: var(--r-md); border: 1px solid var(--line);
+    background: var(--surface-soft); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .barcode-scan-btn:active { background: var(--peach-bg-deep); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 2px; }
+  .toggle-row .t-label { font-size: 14px; font-weight: 700; }
+  .toggle-row .t-sub { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
+  .switch { position: relative; width: 46px; height: 27px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--line); border-radius: var(--r-pill); transition: .2s; cursor: pointer; }
+  .slider::before { content: ""; position: absolute; width: 21px; height: 21px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  input:checked + .slider { background: var(--sage); }
+  input:checked + .slider::before { transform: translateX(19px); }
+
+  /* ================= AI CHAT ================= */
+  #chat-panel { display: none; flex-direction: column; height: 100%; }
+  #chat-panel.active { display: flex; }
+  #chat-panel main.chat-main { flex: 1; padding: 0 18px 18px; display: flex; flex-direction: column; }
+
+  .chat-empty { text-align: center; padding: 30px 10px 20px; }
+  .chat-empty .glow {
+    width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 14px;
+    background: linear-gradient(145deg, var(--sage-soft), var(--accent-soft));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chat-empty h3 { font-size: 16px; font-weight: 800; margin: 0 0 6px; }
+  .chat-empty p { font-size: 13px; color: var(--ink-soft); margin: 0 0 18px; font-weight: 500; line-height: 1.5; }
+  .suggest-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill);
+    padding: 9px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .chip:active { background: var(--surface-soft); }
+
+  .msg-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 0 14px; }
+  .msg { max-width: 82%; padding: 11px 15px; font-size: 14px; font-weight: 500; line-height: 1.45; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-radius: 18px 18px 4px 18px; }
+  .msg.assistant { align-self: flex-start; background: var(--surface); color: var(--ink); border-radius: 18px 18px 18px 4px; box-shadow: var(--shadow-card); }
+  .msg.assistant p { margin: 0 0 8px; }
+  .msg.assistant p:last-child { margin-bottom: 0; }
+  .msg.assistant ul, .msg.assistant ol { margin: 0 0 8px; padding-left: 18px; }
+  .msg.assistant li { margin-bottom: 3px; }
+  .msg.assistant strong { font-weight: 800; }
+  .msg.assistant code { background: var(--surface-soft); border-radius: 5px; padding: 1px 5px; font-size: 12.5px; }
+  .msg.assistant pre { background: var(--surface-soft); border-radius: var(--r-sm); padding: 10px 12px; overflow-x: auto; margin: 0 0 8px; }
+  .msg.assistant pre code { background: none; padding: 0; }
+  .msg.assistant a { color: var(--accent); font-weight: 700; }
+  .msg.assistant table { border-collapse: collapse; width: 100%; margin-bottom: 8px; font-size: 13px; }
+  .msg.assistant th, .msg.assistant td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; white-space: nowrap; }
+  .msg.assistant .table-scroll { overflow-x: auto; max-width: 100%; margin-bottom: 8px; -webkit-overflow-scrolling: touch; }
+  .msg.assistant .table-scroll table { margin-bottom: 0; }
+  .msg.tool-note { align-self: center; background: var(--sage-wash); color: var(--sage); font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: var(--r-pill); max-width: 90%; }
+  .msg.typing { display: flex; gap: 4px; align-items: center; padding: 14px 16px; }
+  .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); animation: bounce 1.2s infinite; }
+  .typing-dot:nth-child(2) { animation-delay: .15s; }
+  .typing-dot:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+  .chat-input-bar {
+    display: flex; align-items: center; gap: 8px; background: var(--surface);
+    border-radius: var(--r-pill); padding: 6px 6px 6px 18px; box-shadow: var(--shadow-soft); flex-shrink: 0;
+  }
+  .chat-input-bar input { flex: 1; border: none; outline: none; background: transparent; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .chat-input-bar input::placeholder { color: var(--ink-faint); font-weight: 500; }
+  .send-btn {
+    width: 38px; height: 38px; border-radius: var(--r-pill); background: var(--accent); border: none;
+    display: flex; align-items: center; justify-content: center; color: var(--accent-ink); cursor: pointer; flex-shrink: 0;
+  }
+  .send-btn:disabled { background: var(--accent-soft); }
+  .key-banner {
+    display: flex; align-items: center; gap: 10px; background: var(--danger-soft); color: var(--danger);
+    border-radius: var(--r-md); padding: 12px 14px; font-size: 12.5px; font-weight: 700; margin-bottom: 12px; cursor: pointer;
+  }
+
+  /* ================= OPTIONS ================= */
+  .opt-group { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card); margin-bottom: 16px; overflow: hidden; }
+  .opt-group-title { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 0 0 8px 6px; }
+  .opt-row {
+    display: flex; align-items: center; gap: 13px; padding: 14px 16px;
+    border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .opt-row:last-child { border-bottom: none; }
+  .opt-row:active { background: var(--surface-soft); }
+  .opt-icon {
+    width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .opt-icon.peach { background: var(--accent-wash); color: var(--accent); }
+  .opt-icon.sage { background: var(--sage-wash); color: var(--sage); }
+  .opt-text { flex: 1; }
+  .opt-text .t { font-size: 14.5px; font-weight: 700; }
+  .opt-text .s { font-size: 12px; color: var(--ink-soft); margin-top: 1px; font-weight: 500; }
+  .opt-chevron { color: var(--ink-faint); }
+  .opt-row.danger .opt-text .t { color: var(--danger); }
+
+  .profile-card { display: flex; align-items: center; gap: 14px; padding: 20px; }
+  .profile-avatar {
+    width: 52px; height: 52px; border-radius: var(--r-pill); background: var(--accent);
+    color: var(--accent-ink); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; flex-shrink: 0;
+  }
+  .profile-name { font-weight: 800; font-size: 16px; }
+  .profile-sub { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; }
+
+  /* ================= BOTTOM TAB BAR ================= */
+  nav.tabbar {
+    position: absolute; left: 14px; right: 14px; bottom: 14px;
+    background: var(--surface); border-radius: var(--r-pill);
+    box-shadow: 0 16px 34px -14px rgba(46, 38, 32, 0.35);
+    display: flex; padding: 7px; z-index: 30;
+  }
+  .tab-btn {
+    flex: 1; border: none; background: transparent; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; padding: 9px 4px 8px; border-radius: var(--r-pill);
+    cursor: pointer; color: var(--ink-faint); position: relative; z-index: 2;
+    transition: color .2s ease;
+  }
+  .tab-btn.is-active { color: var(--accent-ink); }
+  .tab-btn span { font-size: 10.5px; font-weight: 700; }
+  .tab-pill {
+    position: absolute; top: 7px; bottom: 7px; border-radius: var(--r-pill);
+    background: var(--accent); z-index: 1; transition: transform .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1);
+  }
+
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* ================= FLOATING CHECKOUT BUTTON ================= */
+  .fab-checkout {
+    position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
+    width: 58px; height: 58px; border-radius: var(--r-pill); background: var(--accent);
+    color: var(--accent-ink); border: 4px solid var(--peach-bg); box-shadow: var(--shadow-soft);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 35;
+  }
+  .fab-checkout:active { transform: translateX(-50%) scale(0.94); }
+
+  /* ================= FULLSCREEN CAMERA OVERLAYS ================= */
+  .cam-overlay {
+    position: absolute; inset: 0; background: var(--ink); color: #fff;
+    display: none; flex-direction: column; z-index: 80;
+  }
+  .cam-overlay.show { display: flex; }
+  .cam-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 18px 10px; flex-shrink: 0;
+  }
+  .cam-head h2 { font-size: 16px; font-weight: 800; margin: 0; }
+  .cam-head .cam-close {
+    width: 34px; height: 34px; border-radius: var(--r-pill); background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; border: none;
+  }
+  .cam-stage { position: relative; flex: 1; margin: 0 18px; border-radius: var(--r-xl); overflow: hidden; background: #000; }
+  .cam-stage video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam-frame-guide {
+    position: absolute; inset: 14%; border: 2px dashed rgba(255,255,255,0.5); border-radius: var(--r-lg); pointer-events: none;
+  }
+  .cam-footer { padding: 16px 18px 26px; flex-shrink: 0; }
+
+  /* -- 4-angle capture flow -- */
+  .angle-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+  .angle-dot {
+    width: 34px; height: 34px; border-radius: var(--r-pill); background: rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.6);
+    border: 2px solid transparent;
+  }
+  .angle-dot.current { border-color: var(--accent-soft); color: #fff; background: rgba(255,255,255,0.2); }
+  .angle-dot.done { background: var(--sage); color: #fff; }
+  /* -- free-form reference photo capture -- */
+  .capture-counter { text-align: center; font-size: 15px; font-weight: 800; margin-bottom: 12px; color: #fff; }
+  .capture-counter span { color: var(--accent-soft); }
+  .photo-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; -webkit-overflow-scrolling: touch; }
+  .photo-strip::-webkit-scrollbar { display: none; }
+  .photo-thumb { position: relative; width: 54px; height: 54px; border-radius: var(--r-md); overflow: hidden; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.25); }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-thumb .rm { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 11px; line-height: 18px; text-align: center; cursor: pointer; }
+  .capture-tip {
+    display: flex; gap: 10px; align-items: flex-start; background: rgba(255,255,255,0.1);
+    border-radius: var(--r-md); padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px; font-weight: 600; line-height: 1.5;
+  }
+  .capture-tip svg { flex-shrink: 0; margin-top: 1px; }
+  .angle-label-big { text-align: center; font-size: 15px; font-weight: 800; margin-bottom: 14px; }
+  .angle-label-big span { color: var(--accent-soft); }
+  .shutter-row { display: flex; align-items: center; justify-content: center; gap: 24px; }
+  .shutter-btn {
+    width: 68px; height: 68px; border-radius: var(--r-pill); background: #fff; border: 4px solid rgba(255,255,255,0.35);
+    cursor: pointer;
+  }
+  .shutter-btn:active { transform: scale(0.93); }
+  .skip-link {
+    text-align: center; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.55); cursor: pointer;
+  }
+  .capture-review { display: flex; flex-direction: column; align-items: center; }
+  .capture-review img { width: 70%; border-radius: var(--r-lg); margin-bottom: 16px; }
+  .review-row { display: flex; gap: 12px; width: 100%; }
+  .review-row .pill-btn { flex: 1; }
+
+  /* -- checkout scanner -- */
+  .scan-status-chip {
+    align-self: center; background: rgba(255,255,255,0.14); border-radius: var(--r-pill);
+    padding: 7px 16px; font-size: 12px; font-weight: 700; margin: 0 0 10px;
+  }
+  .confirm-card {
+    position: absolute; left: 18px; right: 18px; bottom: 110px; background: var(--surface); color: var(--ink);
+    border-radius: var(--r-lg); padding: 16px; box-shadow: 0 16px 32px rgba(0,0,0,0.35); z-index: 5;
+    display: none; align-items: center; gap: 12px;
+  }
+  .confirm-card.show { display: flex; }
+  .confirm-thumb {
+    width: 44px; height: 44px; border-radius: var(--r-md); background: var(--peach-bg-deep);
+    display: flex; align-items: center; justify-content: center; color: var(--accent); font-weight: 800; flex-shrink: 0;
+  }
+  .confirm-info { flex: 1; min-width: 0; }
+  .confirm-info .n { font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .confirm-info .p { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .qty-stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .qty-stepper button {
+    width: 26px; height: 26px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface-soft);
+    color: var(--ink); font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  }
+  .qty-stepper button:active { background: var(--peach-bg-deep); }
+  .qty-stepper .qty-val { font-weight: 800; font-size: 14px; min-width: 18px; text-align: center; }
+  .confirm-add-btn {
+    background: var(--accent); color: var(--accent-ink); border: none; border-radius: var(--r-pill);
+    padding: 9px 16px; font-weight: 800; font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .candidate-mini {
+    display: none; position: absolute; left: 18px; right: 18px; top: 50%; transform: translateY(-50%);
+    flex-direction: column; gap: 8px; background: rgba(20, 16, 12, 0.9); border-radius: var(--r-lg);
+    padding: 14px; z-index: 5; box-shadow: 0 16px 32px rgba(0,0,0,0.4); max-height: 70%; overflow-y: auto;
+  }
+  .candidate-mini.show { display: flex; }
+  .candidate-mini-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  .candidate-mini-title {
+    font-size: 11.5px; font-weight: 800; color: rgba(255,255,255,0.6); text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .candidate-mini-close {
+    width: 22px; height: 22px; border-radius: 50%; border: none; background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .candidate-mini-close:active { background: rgba(255,255,255,0.22); }
+  .candidate-mini-row {
+    display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.1);
+    border-radius: var(--r-md); padding: 12px 14px; cursor: pointer;
+  }
+  .candidate-mini-row .n { font-weight: 700; font-size: 13.5px; }
+  .candidate-mini-row .sc { font-size: 11.5px; color: rgba(255,255,255,0.6); font-weight: 600; }
+
+  .cart-bar {
+    position: absolute; left: 18px; right: 18px; bottom: 18px; background: var(--surface); color: var(--ink);
+    border-radius: var(--r-pill); box-shadow: 0 16px 32px rgba(0,0,0,0.35); padding: 8px 8px 8px 18px;
+    display: flex; align-items: center; gap: 10px; z-index: 6;
+  }
+  .cart-count { font-size: 13px; font-weight: 700; flex: 1; }
+  .cart-count b { font-weight: 800; }
+  .cart-bar .pill-btn { flex-shrink: 0; }
+
+  /* -- invoice screen -- */
+  .invoice-overlay {
+    position: absolute; inset: 0; background: var(--peach-bg); display: none; flex-direction: column; z-index: 90;
+  }
+  .invoice-overlay.show { display: flex; }
+  .invoice-scroll { flex: 1; overflow-y: auto; padding: 26px 22px 20px; }
+  .invoice-check {
+    width: 56px; height: 56px; border-radius: var(--r-pill); background: var(--sage-wash); color: var(--sage);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+  }
+  .invoice-title { text-align: center; font-size: 19px; font-weight: 800; margin: 0 0 4px; }
+  .invoice-sub { text-align: center; font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-bottom: 22px; }
+  .invoice-lines { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-card); padding: 6px 18px; margin-bottom: 16px; }
+  .invoice-line { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .invoice-line:last-child { border-bottom: none; }
+  .invoice-line .ln { font-weight: 700; }
+  .invoice-line .ld { color: var(--ink-soft); font-weight: 600; font-size: 12px; margin-top: 2px; }
+  .invoice-line .lp { font-weight: 800; }
+  .invoice-total-row { display: flex; justify-content: space-between; padding: 16px 18px; background: var(--surface);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-card); font-size: 15px; font-weight: 800; margin-bottom: 16px; }
+  .invoice-id { text-align: center; font-size: 11.5px; color: var(--ink-faint); font-weight: 600; margin-bottom: 6px; }
+  .invoice-footer { padding: 10px 22px 26px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div id="shell">
+
+  <!-- ============ ANALYTICS ============ -->
+  <div class="panel active" id="panel-analytics">
+    <header class="page-head">
+      <div><h1>Analytics</h1><div class="head-sub">Today, 17 September</div></div>
+      <div class="head-action" aria-label="Filter">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="17" x2="13" y2="17"/></svg>
+      </div>
+    </header>
+    <main>
+      <div class="empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#B7A695" stroke-width="1.6"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="15"/></svg>
+        <p>No sales data yet. Analytics will fill in once you've made a few checkouts.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ INVENTORY ============ -->
+  <div class="panel" id="panel-inventory">
+    <header class="page-head">
+      <div><h1>Inventory</h1><div class="head-sub" id="inv-count-sub">Loading…</div></div>
+    </header>
+    <main>
+      <div class="sales-strip">
+        <div class="seg"><div class="n" id="stat-sold-today">₹0</div><div class="l">Sold today</div></div>
+        <div class="seg"><div class="n" id="stat-units-today">0</div><div class="l">Units sold</div></div>
+        <div class="seg"><div class="n" id="stat-low-stock">0</div><div class="l">Low stock</div></div>
+      </div>
+
+      <div class="search-add-row">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A7A6B" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="inv-search" placeholder="Search inventory" oninput="renderInventory()" />
+        </div>
+        <button class="fab-add" onclick="openAddItemSheet()" aria-label="Add item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+
+      <div id="inv-list"></div>
+      <div class="empty-state" id="inv-empty" style="display:none;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#B7A695" stroke-width="1.6"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 7l2-4h14l2 4"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+        <p>No items yet — tap + to add your first product.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ AI CHAT ============ -->
+  <div class="panel" id="panel-chat">
+    <header class="page-head">
+      <div><h1>AI Chat</h1><div class="head-sub">Gemini 3.5 Flash-Lite</div></div>
+      <div class="head-action" onclick="switchTab('options')" aria-label="API key settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      </div>
+    </header>
+    <main class="chat-main">
+      <div id="key-banner" class="key-banner" style="display:none" onclick="switchTab('options')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.6" fill="currentColor"/></svg>
+        <span>Add your Gemini API key in Options to start chatting</span>
+      </div>
+
+      <div id="chat-empty" class="chat-empty">
+        <div class="glow">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#B5642F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>
+        </div>
+        <h3>Ask about your shop</h3>
+        <p>I can see your current inventory and sales, and I can update stock, prices and details for you — just ask.</p>
+        <div class="suggest-chips">
+          <div class="chip" onclick="sendSuggested('What is running low on stock?')">What's low on stock?</div>
+          <div class="chip" onclick="sendSuggested('What sold best this week?')">Best sellers this week</div>
+          <div class="chip" onclick="sendSuggested('Add 10 units of Amul Milk to stock')">Restock an item</div>
+        </div>
+      </div>
+
+      <div class="msg-list" id="msg-list"></div>
+
+      <div class="chat-input-bar">
+        <input id="chat-input" placeholder="Message Kairos AI…" onkeydown="if(event.key==='Enter')sendChat();" />
+        <button class="send-btn" id="chat-send-btn" onclick="sendChat()" aria-label="Send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ OPTIONS ============ -->
+  <div class="panel" id="panel-options">
+    <header class="page-head"><h1>Options</h1></header>
+    <main>
+      <div class="opt-group">
+        <div class="profile-card">
+          <div class="profile-avatar" id="shop-avatar-letter">S</div>
+          <div>
+            <div class="profile-name" id="shop-name-display">My Shop</div>
+            <div class="profile-sub">Tap to edit shop details</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="opt-group-title">AI Chat</p>
+      <div class="opt-group">
+        <div class="opt-row" onclick="openApiKeySheet()">
+          <div class="opt-icon sage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Gemini API key</div><div class="s" id="api-key-status">Not set</div></div>
+          <svg class="opt-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="opt-row">
+          <div class="opt-icon peach">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V8a5 5 0 0 1 10 0v3"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Model</div><div class="s">gemini-3.5-flash-lite</div></div>
+        </div>
+      </div>
+
+      <p class="opt-group-title">Support</p>
+      <div class="opt-group">
+        <div class="opt-row" onclick="openSupportSheet()">
+          <div class="opt-icon peach">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Contact support</div><div class="s">Get help from our team</div></div>
+          <svg class="opt-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="opt-row">
+          <div class="opt-icon sage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1.5 1-1.5 2.2"/><circle cx="12" cy="17" r="0.6" fill="currentColor"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Help centre</div><div class="s">Guides and FAQs</div></div>
+          <svg class="opt-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+
+      <p class="opt-group-title">About</p>
+      <div class="opt-group">
+        <div class="opt-row">
+          <div class="opt-icon peach">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">App version</div><div class="s">1.0.0</div></div>
+        </div>
+        <div class="opt-row danger" onclick="confirmResetData()">
+          <div class="opt-icon" style="background:var(--danger-soft); color:var(--danger);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Reset local data</div><div class="s">Clears inventory and chat on this device</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ============ BOTTOM TAB BAR ============ -->
+  <nav class="tabbar">
+    <div class="tab-pill" id="tab-pill"></div>
+    <button class="tab-btn is-active" data-tab="analytics" onclick="switchTab('analytics')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="15"/></svg>
+      <span>Analytics</span>
+    </button>
+    <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0 1 10 0v2"/></svg>
+      <span>Inventory</span>
+    </button>
+    <button class="tab-btn" data-tab="chat" onclick="switchTab('chat')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/><path d="M19 15l.7 1.8L21.5 18l-1.8.7L19 20.5l-.7-1.8L16.5 18l1.8-.7L19 15z"/></svg>
+      <span>AI Chat</span>
+    </button>
+    <button class="tab-btn" data-tab="options" onclick="switchTab('options')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <span>Options</span>
+    </button>
+  </nav>
+
+  <button class="fab-checkout" onclick="openCheckoutScanner()" aria-label="Start checkout">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- ============ 4-ANGLE CAPTURE FLOW ============ -->
+  <div class="cam-overlay" id="capture-overlay">
+    <div class="cam-head">
+      <h2>Photograph the product</h2>
+      <button class="cam-close" onclick="closeCaptureFlow()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cam-stage">
+      <video id="capture-video" autoplay playsinline muted></video>
+      <div class="cam-frame-guide"></div>
+    </div>
+    <div class="cam-footer">
+      <div class="capture-counter"><span id="capture-count">0</span> photo<span id="capture-count-plural">s</span> captured</div>
+      <div class="photo-strip" id="photo-strip"></div>
+      <div id="capture-tip" class="capture-tip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.5" fill="#fff"/></svg>
+        <span>Take as many or as few photos as you like, from any angle — a few different sides helps the scanner recognise it faster at checkout.</span>
+      </div>
+      <div class="shutter-row">
+        <button class="shutter-btn" onclick="captureFreeShot()" aria-label="Capture"></button>
+      </div>
+      <button class="pill-btn block" style="margin-top:2px;" onclick="closeCaptureFlow()">Done</button>
+      <div class="skip-link" onclick="closeCaptureFlow()">Skip photos for now</div>
+    </div>
+  </div>
+
+  <!-- ============ CHECKOUT SCANNER ============ -->
+  <div class="cam-overlay" id="checkout-overlay">
+    <div class="cam-head">
+      <h2>Scan items</h2>
+      <button class="cam-close" onclick="closeCheckoutScanner()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cam-stage">
+      <video id="checkout-video" autoplay playsinline muted></video>
+      <div class="cam-frame-guide"></div>
+      <div class="confirm-card" id="confirm-card">
+        <div class="confirm-thumb" id="confirm-thumb">?</div>
+        <div class="confirm-info">
+          <div class="n" id="confirm-name">—</div>
+          <div class="p" id="confirm-price">—</div>
+        </div>
+        <div class="qty-stepper">
+          <button onclick="decrementConfirmQty()" aria-label="Decrease quantity">−</button>
+          <span class="qty-val" id="confirm-qty">1</span>
+          <button onclick="incrementConfirmQty()" aria-label="Increase quantity">+</button>
+        </div>
+        <button class="confirm-add-btn" onclick="confirmAddToCart()">Add</button>
+      </div>
+      <div class="candidate-mini" id="candidate-mini">
+        <div class="candidate-mini-head">
+          <div class="candidate-mini-title">A few possible matches</div>
+          <button class="candidate-mini-close" onclick="dismissCandidateMini()" aria-label="Dismiss">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="cam-footer">
+      <div class="scan-status-chip" id="scan-status-chip">Hold an item steady in frame</div>
+      <div class="cart-bar">
+        <div class="cart-count"><b id="cart-item-count">0</b> items · <b id="cart-subtotal">₹0</b></div>
+        <button class="pill-btn secondary" onclick="closeCheckoutScanner()">Cancel</button>
+        <button class="pill-btn" onclick="endCheckout()">End checkout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INVOICE ============ -->
+  <div class="invoice-overlay" id="invoice-overlay">
+    <div class="invoice-scroll">
+      <div class="invoice-check">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2 class="invoice-title">Sale complete</h2>
+      <div class="invoice-sub" id="invoice-timestamp">—</div>
+      <div class="invoice-lines" id="invoice-lines"></div>
+      <div class="invoice-total-row"><span>Total</span><span id="invoice-total">₹0</span></div>
+      <div class="invoice-id" id="invoice-id-line">—</div>
+    </div>
+    <div class="invoice-footer">
+      <button class="pill-btn block" onclick="closeInvoice()">Done</button>
+    </div>
+  </div>
+
+  <!-- ============ ADD ITEM SHEET ============ -->
+  <div class="sheet-overlay" id="add-item-overlay" onclick="if(event.target===this) closeAddItemSheet()">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2>Add item</h2>
+      <div class="field">
+        <label>Item name</label>
+        <input id="f-name" placeholder="e.g. Parle-G Biscuits" />
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Brand</label><input id="f-brand" placeholder="e.g. Parle" /></div>
+        <div class="field"><label>Size / variant</label><input id="f-size" placeholder="e.g. 100g" /></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Price (₹)</label><input id="f-price" type="number" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Stock quantity</label><input id="f-stock" type="number" inputmode="numeric" placeholder="0" /></div>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-category">
+          <option>Groceries</option>
+          <option>Snacks</option>
+          <option>Beverages</option>
+          <option>Dairy</option>
+          <option>Household</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div><div class="t-label">QR-enabled</div><div class="t-sub">This item has a printed QR sticker</div></div>
+        <label class="switch"><input type="checkbox" id="f-qr" /><span class="slider"></span></label>
+      </div>
+      <div class="field">
+        <label>Barcode (optional)</label>
+        <div class="barcode-field-row">
+          <input id="f-barcode" placeholder="Scan or type the packaging barcode" />
+          <button type="button" class="barcode-scan-btn" onclick="openBarcodeScanFlow()" aria-label="Scan barcode">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="1.5"/><line x1="7" y1="5" x2="7" y2="19"/><line x1="10.5" y1="5" x2="10.5" y2="19"/><line x1="14" y1="5" x2="14" y2="19"/><line x1="17.5" y1="5" x2="17.5" y2="19"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="pill-btn block" style="margin-top:14px;" onclick="saveNewItem()">Save &amp; add photos</button>
+      <button class="pill-btn secondary block" style="margin-top:10px;" onclick="closeAddItemSheet()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ BARCODE SCAN (used from Add Item) ============ -->
+  <div class="cam-overlay" id="barcode-scan-overlay">
+    <div class="cam-head">
+      <h2>Scan the barcode</h2>
+      <button class="cam-close" onclick="closeBarcodeScanFlow()" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="cam-stage">
+      <video id="barcode-scan-video" autoplay playsinline muted></video>
+      <div class="cam-frame-guide"></div>
+    </div>
+    <div class="cam-footer">
+      <div class="scan-status-chip" id="barcode-scan-chip">Fill the frame with the barcode</div>
+      <div class="skip-link" onclick="closeBarcodeScanFlow()">Cancel</div>
+    </div>
+  </div>
+
+  <!-- ============ API KEY SHEET ============ -->
+  <div class="sheet-overlay" id="api-key-overlay" onclick="if(event.target===this) closeApiKeySheet()">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2>Gemini API key</h2>
+      <p style="font-size:12px; color:var(--ink-soft); font-weight:500; line-height:1.5; margin:0 0 16px;">
+        Configured in the app's <code>.env</code> file. Restart the app after changing it.
+      </p>
+      <button class="pill-btn secondary block" style="margin-top:10px;" onclick="closeApiKeySheet()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ SUPPORT SHEET ============ -->
+  <div class="sheet-overlay" id="support-overlay" onclick="if(event.target===this) closeSupportSheet()">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2>Contact support</h2>
+      <div class="opt-group" style="box-shadow:none; border:1px solid var(--line);">
+        <div class="opt-row" onclick="window.location.href='mailto:support@kairos.app'">
+          <div class="opt-icon peach">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Email us</div><div class="s">support@kairos.app</div></div>
+        </div>
+        <div class="opt-row" onclick="window.location.href='tel:+911234567890'">
+          <div class="opt-icon sage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.9.6 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.8 2.2z"/></svg>
+          </div>
+          <div class="opt-text"><div class="t">Call us</div><div class="s">+91 12345 67890 · 9am–7pm</div></div>
+        </div>
+      </div>
+      <button class="pill-btn secondary block" style="margin-top:16px;" onclick="closeSupportSheet()">Close</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================================================================
+   Data layer — calls pywebview.api.* when available (Android/desktop
+   shell), falls back to in-memory demo data when opened as a plain
+   HTML file so the UI can be previewed on its own.
+   =================================================================== */
+const hasApi = () => (typeof pywebview !== 'undefined' && pywebview.api);
+
+let inventory = [];
+let chatHistory = []; // {role: 'user'|'assistant', text}
+
+async function loadInventory() {
+  if (hasApi() && pywebview.api.list_products) {
+    try { inventory = await pywebview.api.list_products(); }
+    catch (e) { inventory = []; }
+  } else {
+    // No backend attached (previewing the HTML on its own) — show the
+    // real empty state rather than sample rows.
+    inventory = [];
+  }
+  renderInventory();
+  loadSalesSummary();
+}
+
+async function loadSalesSummary() {
+  let summary = { revenue: 0, units: 0 };
+  if (hasApi() && pywebview.api.today_sales_summary) {
+    try { summary = await pywebview.api.today_sales_summary(); } catch (e) {}
+  }
+  document.getElementById('stat-sold-today').innerText = money(summary.revenue);
+  document.getElementById('stat-units-today').innerText = summary.units ?? 0;
+}
+
+function money(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+
+function renderInventory() {
+  const q = (document.getElementById('inv-search').value || '').toLowerCase();
+  const list = document.getElementById('inv-list');
+  const empty = document.getElementById('inv-empty');
+  const filtered = inventory.filter(p =>
+    !q || p.name.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)
+  );
+
+  document.getElementById('inv-count-sub').innerText = `${inventory.length} item${inventory.length === 1 ? '' : 's'} tracked`;
+  document.getElementById('stat-low-stock').innerText = inventory.filter(p => (p.stock_qty ?? 0) < 5).length;
+
+  list.innerHTML = '';
+  empty.style.display = filtered.length ? 'none' : 'block';
+
+  filtered.forEach(p => {
+    const low = (p.stock_qty ?? 0) < 5;
+    const row = document.createElement('div');
+    row.className = 'inv-item';
+    row.innerHTML = `
+      <div class="inv-thumb">${(p.name || '?').charAt(0).toUpperCase()}</div>
+      <div class="inv-info">
+        <div class="inv-name">${escapeHtml(p.name)}</div>
+        <div class="inv-sub">${escapeHtml(p.brand || '')}${p.brand && p.size_variant ? ' · ' : ''}${escapeHtml(p.size_variant || '')}</div>
+      </div>
+      <div class="inv-right">
+        <div class="inv-meta">
+          <div class="inv-price">${money(p.price)}</div>
+          <div class="inv-stock"><span class="badge ${low ? 'low' : 'ok'}">${p.stock_qty ?? 0} in stock</span></div>
+        </div>
+        <button class="inv-delete-btn" aria-label="Delete item" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>`;
+    row.querySelector('.inv-delete-btn').onclick = (ev) => {
+      ev.stopPropagation();
+      deleteInventoryItem(p.id, p.name);
+    };
+    list.appendChild(row);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- Add item sheet ---------- */
+function openAddItemSheet() { document.getElementById('add-item-overlay').classList.add('show'); }
+function closeAddItemSheet() {
+  document.getElementById('add-item-overlay').classList.remove('show');
+  ['f-name','f-brand','f-size','f-price','f-stock','f-barcode'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-qr').checked = false;
+}
+
+async function saveNewItem() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) return;
+  const brand = document.getElementById('f-brand').value.trim();
+  const size_variant = document.getElementById('f-size').value.trim();
+  const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const stock_qty = parseInt(document.getElementById('f-stock').value, 10) || 0;
+  const category = document.getElementById('f-category').value;
+  const qr_enabled = document.getElementById('f-qr').checked;
+  const barcode = document.getElementById('f-barcode').value.trim();
+
+  let newProductId = null;
+  if (hasApi() && pywebview.api.add_product_full) {
+    try {
+      const r = await pywebview.api.add_product_full(name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode);
+      newProductId = r && r.id;
+    } catch (e) { console.error(e); }
+  } else {
+    newProductId = 'local-' + Date.now();
+    inventory.push({ id: newProductId, name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode });
+  }
+  closeAddItemSheet();
+  await loadInventory();
+
+  // Walk the shopkeeper through as many reference photos as they want to
+  // take, so the checkout scanner can recognise it visually (no QR/barcode needed).
+  if (newProductId) openCaptureFlow(newProductId, name);
+}
+
+async function deleteInventoryItem(productId, name) {
+  if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+  if (hasApi() && pywebview.api.delete_product) {
+    try { await pywebview.api.delete_product(productId); }
+    catch (e) { console.error(e); showToast('Could not delete item'); return; }
+  } else {
+    inventory = inventory.filter(p => p.id !== productId);
+  }
+  await loadInventory();
+  showToast(`Deleted ${name}`);
+}
+
+/* ===================================================================
+   Free-form reference photo capture — no fixed slot count or dictated
+   angle sequence. The shopkeeper can take as many or as few photos as
+   they want, of whatever side of the product they want, in whatever
+   order; each shot is saved immediately as it's taken and shown as a
+   thumbnail they can remove before finishing.
+   =================================================================== */
+let captureState = { productId: null, productName: '', stream: null, shots: [] }; // shots: [{refId, thumbDataUrl}]
+let _captureShotSeq = 0;
+
+function hasSeenCaptureTutorial() {
+  try { return localStorage.getItem('kairos_seen_capture_tutorial') === '1'; } catch (e) { return false; }
+}
+function markCaptureTutorialSeen() {
+  try { localStorage.setItem('kairos_seen_capture_tutorial', '1'); } catch (e) {}
+}
+
+async function openCaptureFlow(productId, productName) {
+  captureState = { productId, productName, stream: null, shots: [] };
+  _captureShotSeq = 0;
+  document.getElementById('capture-tip').style.display = hasSeenCaptureTutorial() ? 'none' : 'flex';
+  renderCaptureShots();
+  document.getElementById('capture-overlay').classList.add('show');
+
+  const video = document.getElementById('capture-video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    captureState.stream = stream;
+  } catch (e) {
+    console.error('Camera unavailable', e);
+  }
+}
+
+function renderCaptureShots() {
+  const n = captureState.shots.length;
+  document.getElementById('capture-count').innerText = n;
+  document.getElementById('capture-count-plural').innerText = n === 1 ? '' : 's';
+
+  const strip = document.getElementById('photo-strip');
+  strip.innerHTML = '';
+  captureState.shots.forEach(shot => {
+    const el = document.createElement('div');
+    el.className = 'photo-thumb';
+    el.innerHTML = `<img src="${shot.thumbDataUrl}"><div class="rm">×</div>`;
+    el.querySelector('.rm').onclick = () => removeCaptureShot(shot.seq);
+    strip.appendChild(el);
+  });
+}
+
+function removeCaptureShot(seq) {
+  // Removes it from the on-screen strip; the photo already saved to disk
+  // stays there (deleting a specific reference image isn't wired up yet),
+  // this just stops it from being confusing in the current session's review.
+  captureState.shots = captureState.shots.filter(s => s.seq !== seq);
+  renderCaptureShots();
+}
+
+function stopCaptureCamera() {
+  if (captureState.stream) {
+    captureState.stream.getTracks().forEach(t => t.stop());
+    captureState.stream = null;
+  }
+}
+
+function closeCaptureFlow() {
+  stopCaptureCamera();
+  document.getElementById('capture-overlay').classList.remove('show');
+  if (captureState.shots.length) markCaptureTutorialSeen();
+  if (captureState.productName) {
+    showToast(captureState.shots.length
+      ? `✓ ${captureState.productName} is ready to scan at checkout`
+      : `${captureState.productName} saved — add photos anytime from Inventory`);
+  }
+}
+
+async function captureFreeShot() {
+  const video = document.getElementById('capture-video');
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth || 640;
+  c.height = video.videoHeight || 480;
+  if (!c.width) return;
+  c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+  const dataUrl = c.toDataURL('image/jpeg', 0.85);
+  const seq = ++_captureShotSeq;
+  const angleLabel = `photo_${seq}`; // just a label for the filename/DB row now, not a dictated angle
+
+  if (hasApi() && pywebview.api.add_reference_image) {
+    try { await pywebview.api.add_reference_image(captureState.productId, angleLabel, dataUrl); }
+    catch (e) { console.error(e); }
+  }
+
+  captureState.shots.push({ seq, thumbDataUrl: dataUrl });
+  renderCaptureShots();
+}
+
+/* ---------- Barcode scan (used from Add Item sheet) ---------- */
+let barcodeScanStream = null;
+let barcodeScanPolling = false;
+
+async function openBarcodeScanFlow() {
+  document.getElementById('barcode-scan-overlay').classList.add('show');
+  document.getElementById('barcode-scan-chip').innerText = 'Fill the frame with the barcode';
+
+  const video = document.getElementById('barcode-scan-video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    barcodeScanStream = stream;
+  } catch (e) {
+    document.getElementById('barcode-scan-chip').innerText = 'Camera unavailable';
+    return;
+  }
+
+  barcodeScanPolling = true;
+  barcodeScanTick();
+}
+
+function closeBarcodeScanFlow() {
+  barcodeScanPolling = false;
+  if (barcodeScanStream) { barcodeScanStream.getTracks().forEach(t => t.stop()); barcodeScanStream = null; }
+  document.getElementById('barcode-scan-overlay').classList.remove('show');
+}
+
+async function barcodeScanTick() {
+  if (!barcodeScanPolling) return;
+  if (!hasApi() || !pywebview.api.detect_barcode) {
+    document.getElementById('barcode-scan-chip').innerText = 'Not connected to the shop backend';
+    setTimeout(barcodeScanTick, 500);
+    return;
+  }
+  const video = document.getElementById('barcode-scan-video');
+  if (!video.videoWidth) { setTimeout(barcodeScanTick, 300); return; }
+
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+  const frame = c.toDataURL('image/jpeg', 0.85);
+
+  let res;
+  try { res = await pywebview.api.detect_barcode(frame); } catch (e) { res = null; }
+
+  if (res && res.found) {
+    document.getElementById('f-barcode').value = res.payload;
+    closeBarcodeScanFlow();
+    showToast(res.already_used_by
+      ? `⚠ That barcode is already used by "${res.already_used_by}"`
+      : `✓ Barcode captured (${res.symbol_type})`);
+    return;
+  }
+
+  if (barcodeScanPolling) setTimeout(barcodeScanTick, 300);
+}
+
+/* ---------- API key sheet ---------- */
+let geminiApiKey = '';
+
+async function loadApiKey() {
+  try {
+    geminiApiKey = await pywebview.api.get_gemini_api_key();
+  } catch (e) {
+    geminiApiKey = '';
+  }
+  refreshKeyStatus();
+}
+
+function openApiKeySheet() {
+  document.getElementById('api-key-overlay').classList.add('show');
+}
+function closeApiKeySheet() { document.getElementById('api-key-overlay').classList.remove('show'); }
+function refreshKeyStatus() {
+  document.getElementById('api-key-status').innerText = geminiApiKey ? 'Connected' : 'Not set';
+  document.getElementById('key-banner').style.display = geminiApiKey ? 'none' : 'flex';
+}
+
+/* ---------- Support sheet ---------- */
+function openSupportSheet() { document.getElementById('support-overlay').classList.add('show'); }
+function closeSupportSheet() { document.getElementById('support-overlay').classList.remove('show'); }
+
+function confirmResetData() {
+  if (!confirm('This clears inventory and chat stored on this device. Continue?')) return;
+  chatHistory = [];
+  apiTurns = [];
+  renderChat();
+  loadInventory();
+}
+
+/* ---------- small toast (shared) ---------- */
+let toastEl;
+function showToast(msg) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.style.cssText = 'position:absolute;left:50%;bottom:100px;transform:translateX(-50%);' +
+      'background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;' +
+      'z-index:95;box-shadow:0 10px 24px rgba(0,0,0,0.3);opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.getElementById('shell').appendChild(toastEl);
+  }
+  toastEl.innerText = msg;
+  toastEl.style.opacity = '1';
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(() => { toastEl.style.opacity = '0'; }, 2400);
+}
+
+/* ===================================================================
+   Checkout scanner — full-screen live camera reusing the same
+   process_frame cascade as the scan-architecture app (QR → OCR/
+   embedding → fusion). Every detection surfaces a one-tap confirm
+   card rather than silently adding to the cart.
+   =================================================================== */
+let checkoutStream = null;
+let checkoutPolling = false;
+let checkoutPaused = false;
+let cart = []; // [{product_id, name, price, quantity}]
+let pendingConfirm = null; // {product, score}
+let pendingQty = 1;
+
+async function openCheckoutScanner() {
+  cart = [];
+  renderCartBar();
+  document.getElementById('checkout-overlay').classList.add('show');
+  hideConfirmCard();
+  hideCandidateMini();
+
+  if (hasApi() && pywebview.api.start_checkout) {
+    try { await pywebview.api.start_checkout(); } catch (e) {}
+  }
+
+  const video = document.getElementById('checkout-video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    checkoutStream = stream;
+  } catch (e) {
+    document.getElementById('scan-status-chip').innerText = 'Camera unavailable';
+    return;
+  }
+
+  checkoutPolling = true;
+  checkoutTick();
+}
+
+function closeCheckoutScanner() {
+  checkoutPolling = false;
+  if (checkoutStream) { checkoutStream.getTracks().forEach(t => t.stop()); checkoutStream = null; }
+  document.getElementById('checkout-overlay').classList.remove('show');
+}
+
+async function checkoutTick() {
+  if (!checkoutPolling) return;
+  if (checkoutPaused || !hasApi() || !pywebview.api.process_frame) {
+    setTimeout(checkoutTick, 350);
+    return;
+  }
+  const video = document.getElementById('checkout-video');
+  if (!video.videoWidth) { setTimeout(checkoutTick, 350); return; }
+
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+  const frame = c.toDataURL('image/jpeg', 0.85);
+
+  const res = await pywebview.api.process_frame(frame);
+  handleCheckoutResult(res);
+  setTimeout(checkoutTick, 350);
+}
+
+function handleCheckoutResult(res) {
+  const chip = document.getElementById('scan-status-chip');
+  if (!res || res.error) { chip.innerText = 'Hold an item steady in frame'; return; }
+
+  if (res.stage === 'gate') {
+    chip.innerText = res.gate && res.gate.ready ? 'Reading item…' : 'Hold an item steady in frame';
+    return;
+  }
+
+  if (res.outcome === 'debounced') {
+    chip.innerText = res.product ? 'Move the item away, then back in, to scan another' : 'Give it a moment before scanning that again';
+    return;
+  }
+
+  if (res.outcome === 'unknown_barcode') {
+    chip.innerText = `Barcode read (${res.barcode}) — not in your catalogue yet. Add it from Inventory.`;
+    return;
+  }
+
+  if (res.outcome === 'auto_confirm' && res.product) {
+    chip.innerText = 'Item recognised';
+    showConfirmCard(res.product, res.score);
+  } else if (res.outcome === 'show_candidates' && res.candidates && res.candidates.length) {
+    chip.innerText = 'A few possible matches — tap one';
+    showCandidateMini(res.candidates);
+  } else if (res.outcome === 'manual') {
+    chip.innerText = "Didn't recognise that item";
+    hideCandidateMini();
+  }
+}
+
+function showConfirmCard(product, score) {
+  pendingConfirm = { product, score };
+  pendingQty = 1;
+  document.getElementById('confirm-thumb').innerText = (product.name || '?').charAt(0).toUpperCase();
+  document.getElementById('confirm-name').innerText = product.name;
+  document.getElementById('confirm-price').innerText = money(product.price);
+  document.getElementById('confirm-qty').innerText = pendingQty;
+  document.getElementById('confirm-card').classList.add('show');
+  hideCandidateMini();
+  checkoutPaused = true; // avoid re-triggering while the card is up
+}
+
+function incrementConfirmQty() {
+  pendingQty = Math.min(99, pendingQty + 1);
+  document.getElementById('confirm-qty').innerText = pendingQty;
+}
+
+function decrementConfirmQty() {
+  pendingQty = Math.max(1, pendingQty - 1);
+  document.getElementById('confirm-qty').innerText = pendingQty;
+}
+
+function hideConfirmCard() {
+  document.getElementById('confirm-card').classList.remove('show');
+  pendingConfirm = null;
+  pendingQty = 1;
+  checkoutPaused = false;
+}
+
+function confirmAddToCart() {
+  if (!pendingConfirm) return;
+  addToCart(pendingConfirm.product, pendingQty);
+  hideConfirmCard();
+}
+
+function showCandidateMini(candidates) {
+  const wrap = document.getElementById('candidate-mini');
+  wrap.querySelectorAll('.candidate-mini-row').forEach(el => el.remove());
+  candidates.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'candidate-mini-row';
+    row.innerHTML = `<span class="n">${escapeHtml(c.name)}</span><span class="sc">${money(c.price)} · ${Math.round((c.score||0)*100)}%</span>`;
+    row.onclick = async () => {
+      if (hasApi() && pywebview.api.confirm_candidate) {
+        try { await pywebview.api.confirm_candidate(c.id, c.score); } catch (e) {}
+      }
+      showConfirmCard(c, c.score); // let the shopkeeper pick a quantity, same as an auto-matched item
+    };
+    wrap.appendChild(row);
+  });
+  wrap.classList.add('show');
+  checkoutPaused = true;
+}
+
+function hideCandidateMini() {
+  const wrap = document.getElementById('candidate-mini');
+  wrap.classList.remove('show');
+  wrap.querySelectorAll('.candidate-mini-row').forEach(el => el.remove());
+  checkoutPaused = false;
+}
+
+function dismissCandidateMini() {
+  // Explicit "none of these" — same as hideCandidateMini, but also gives
+  // the status chip a moment of feedback so it's clear the tap registered
+  // rather than the sheet just vanishing.
+  hideCandidateMini();
+  const chip = document.getElementById('scan-status-chip');
+  if (chip) chip.innerText = 'Hold an item steady in frame';
+}
+
+function addToCart(product, qty) {
+  qty = Math.max(1, parseInt(qty, 10) || 1);
+  const existing = cart.find(c => c.product_id === product.id);
+  if (existing) { existing.quantity += qty; }
+  else { cart.push({ product_id: product.id, name: product.name, price: product.price, quantity: qty }); }
+  renderCartBar();
+  showToast(`Added ${qty > 1 ? qty + '× ' : ''}${product.name}`);
+}
+
+function renderCartBar() {
+  const count = cart.reduce((s, c) => s + c.quantity, 0);
+  const subtotal = cart.reduce((s, c) => s + c.quantity * (c.price || 0), 0);
+  document.getElementById('cart-item-count').innerText = count;
+  document.getElementById('cart-subtotal').innerText = money(subtotal);
+}
+
+async function endCheckout() {
+  if (!cart.length) { closeCheckoutScanner(); return; }
+  let invoice;
+  if (hasApi() && pywebview.api.finalize_checkout) {
+    try {
+      invoice = await pywebview.api.finalize_checkout(cart.map(c => ({ product_id: c.product_id, quantity: c.quantity })));
+    } catch (e) { console.error(e); }
+  }
+  if (!invoice) {
+    // offline/demo fallback so the invoice screen is still previewable
+    invoice = {
+      id: 'local-' + Date.now(),
+      timestamp: Date.now() / 1000,
+      items: cart.map(c => ({ name: c.name, price: c.price, quantity: c.quantity, line_total: c.price * c.quantity })),
+      total: cart.reduce((s, c) => s + c.quantity * c.price, 0),
+    };
+  }
+  closeCheckoutScanner();
+  showInvoice(invoice);
+  await loadInventory();
+}
+
+function showInvoice(invoice) {
+  const list = document.getElementById('invoice-lines');
+  list.innerHTML = '';
+  (invoice.items || []).forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'invoice-line';
+    row.innerHTML = `<div><div class="ln">${escapeHtml(it.name)}</div><div class="ld">${it.quantity} × ${money(it.price)}</div></div><div class="lp">${money(it.line_total)}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('invoice-total').innerText = money(invoice.total);
+  const d = new Date((invoice.timestamp || Date.now() / 1000) * 1000);
+  document.getElementById('invoice-timestamp').innerText = d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  document.getElementById('invoice-id-line').innerText = 'Receipt ' + String(invoice.id || '').slice(0, 8);
+  document.getElementById('invoice-overlay').classList.add('show');
+}
+
+function closeInvoice() {
+  document.getElementById('invoice-overlay').classList.remove('show');
+  cart = [];
+}
+
+/* ===================================================================
+   AI Chat — talks to Gemini directly using the stored key + the
+   'gemini-3.5-flash-lite' model, with current inventory passed in as
+   context. Gemini can call function tools to search products, adjust
+   or set stock, edit product details, and delete products (adding new
+   items is deliberately NOT exposed — that stays a manual, photo-guided
+   flow via the + button on Inventory). Assistant replies render as
+   Markdown.
+   =================================================================== */
+const CHAT_TOOLS = [{
+  function_declarations: [
+    {
+      name: 'search_products',
+      description: 'Find products in the shop inventory by name or brand (partial match). Use this to resolve a product the shopkeeper mentioned by name into its id before calling any other tool.',
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string', description: 'Product name or brand to search for' } },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'update_stock',
+      description: 'Adjust a product\'s stock by a relative amount. Use a positive delta to add stock (restock) and a negative delta to remove stock.',
+      parameters: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string', description: 'The product id, from search_products' },
+          delta: { type: 'integer', description: 'Amount to add (positive) or remove (negative)' },
+          reason: { type: 'string', description: 'Short reason, e.g. "restock" or "damaged goods"' },
+        },
+        required: ['product_id', 'delta'],
+      },
+    },
+    {
+      name: 'set_stock',
+      description: 'Set a product\'s stock to an exact absolute quantity (use this for stock counts / corrections rather than update_stock).',
+      parameters: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string' },
+          quantity: { type: 'integer', description: 'The new absolute stock quantity' },
+        },
+        required: ['product_id', 'quantity'],
+      },
+    },
+    {
+      name: 'update_product',
+      description: 'Edit an existing product\'s details — name, brand, size/variant, price, category, barcode, or whether it is QR-enabled. Only include the fields being changed. Cannot create new products.',
+      parameters: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string' },
+          name: { type: 'string' },
+          brand: { type: 'string' },
+          size_variant: { type: 'string' },
+          price: { type: 'number' },
+          category: { type: 'string' },
+          qr_enabled: { type: 'boolean' },
+          barcode: { type: 'string' },
+        },
+        required: ['product_id'],
+      },
+    },
+  ],
+}];
+
+const TOOL_ACTION_LABELS = {
+  update_stock: 'Updated stock',
+  set_stock: 'Updated stock',
+  update_product: 'Updated product details',
+  search_products: null, // silent — just a lookup, no need to surface it
+};
+
+async function runChatTool(name, args) {
+  if (!hasApi()) return { error: 'Not connected to the shop backend.' };
+  try {
+    switch (name) {
+      case 'search_products':
+        return await pywebview.api.search_products(args.query || '');
+      case 'update_stock':
+        return await pywebview.api.update_stock(args.product_id, args.delta, args.reason || '');
+      case 'set_stock':
+        return await pywebview.api.set_stock(args.product_id, args.quantity);
+      case 'update_product':
+        return await pywebview.api.update_product(
+          args.product_id, args.name, args.brand, args.size_variant,
+          args.price, args.qr_enabled, args.category, args.barcode
+        );
+      default:
+        return { error: `Unknown tool: ${name}` };
+    }
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
+function renderMarkdown(text) {
+  try {
+    if (typeof marked !== 'undefined') {
+      return marked.parse(text, { breaks: true });
+    }
+  } catch (e) { /* fall through to plain text */ }
+  return escapeHtml(text).replace(/\n/g, '<br>');
+}
+
+function renderChat() {
+  const list = document.getElementById('msg-list');
+  const empty = document.getElementById('chat-empty');
+  const visible = chatHistory.filter(m => m.role === 'user' || m.role === 'assistant' || m.role === 'tool-note');
+  empty.style.display = visible.length ? 'none' : 'block';
+  list.innerHTML = '';
+  visible.forEach(m => {
+    const div = document.createElement('div');
+    if (m.role === 'tool-note') {
+      div.className = 'msg tool-note';
+      div.innerText = m.text;
+    } else if (m.role === 'assistant') {
+      div.className = 'msg assistant';
+      div.innerHTML = renderMarkdown(m.text || '');
+      div.querySelectorAll('table').forEach(tbl => {
+        const wrap = document.createElement('div');
+        wrap.className = 'table-scroll';
+        tbl.parentNode.insertBefore(wrap, tbl);
+        wrap.appendChild(tbl);
+      });
+    } else {
+      div.className = 'msg user';
+      div.innerText = m.text;
+    }
+    list.appendChild(div);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+function sendSuggested(text) {
+  document.getElementById('chat-input').value = text;
+  sendChat();
+}
+
+function buildShopContext() {
+  const lines = inventory.map(p =>
+    `- ${p.name} (${p.brand || 'no brand'}, ${p.size_variant || ''}): ₹${p.price}, ${p.stock_qty} in stock`
+  );
+  return lines.length ? lines.join('\n') : 'No items in inventory yet.';
+}
+
+let apiTurns = [];
+
+async function callGemini(key, systemContext) {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(key)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemContext }] },
+        tools: CHAT_TOOLS,
+        contents: apiTurns,
+      }),
+    }
+  );
+  const data = await resp.json();
+  if (!resp.ok) {
+    const msg = (data && data.error && data.error.message) || `Request failed (${resp.status})`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const key = geminiApiKey;
+  if (!key) { switchTab('options'); return; }
+
+  chatHistory.push({ role: 'user', text });
+  apiTurns.push({ role: 'user', parts: [{ text }] });
+  input.value = '';
+  renderChat();
+
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true;
+  const list = document.getElementById('msg-list');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'msg assistant typing';
+  typingEl.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+  list.appendChild(typingEl);
+  list.scrollTop = list.scrollHeight;
+
+  const systemContext =
+    "You are Kairos AI, an assistant inside a shopkeeper's inventory app. " +
+    "Answer using the shop data below, formatting your replies in Markdown " +
+    "(use lists, bold, and short tables where they help readability). " +
+    "You have tools to search products and to update stock, set stock, or edit " +
+    "product details. You do NOT have a tool to add a brand-new product or to " +
+    "delete one — if asked to add or delete an item, tell the shopkeeper to use " +
+    "the Inventory tab directly (the + button to add, or the delete option on " +
+    "an item to remove it). Always resolve a product " +
+    "name to an id with search_products before calling any other tool, and if " +
+    "a name matches more than one product, ask which one they mean instead of " +
+    "guessing. Confirm what you changed in your reply.\n\nCurrent inventory:\n" + buildShopContext();
+
+  try {
+    let guard = 0;
+    while (guard++ < 6) {
+      const data = await callGemini(key, systemContext);
+      const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+      const functionCalls = parts.filter(p => p.functionCall);
+
+      if (functionCalls.length) {
+        apiTurns.push({ role: 'model', parts: parts });
+        const responseParts = [];
+        for (const fc of functionCalls) {
+          const name = fc.functionCall.name;
+          const args = fc.functionCall.args || {};
+          const result = await runChatTool(name, args);
+          const label = TOOL_ACTION_LABELS[name];
+          if (label && !(result && result.error)) {
+            chatHistory.push({ role: 'tool-note', text: '✓ ' + label });
+            renderChat();
+          }
+          responseParts.push({ functionResponse: { name: name, response: { result: result } } });
+        }
+        apiTurns.push({ role: 'function', parts: responseParts });
+        await loadInventory();
+        continue;
+      }
+
+      const reply = parts.map(p => p.text).filter(Boolean).join('') || "I didn't get a response — try again.";
+      apiTurns.push({ role: 'model', parts: [{ text: reply }] });
+      chatHistory.push({ role: 'assistant', text: reply });
+      break;
+    }
+  } catch (e) {
+    chatHistory.push({ role: 'assistant', text: "I couldn't reach Gemini: " + (e.message || e) });
+  }
+
+  typingEl.remove();
+  btn.disabled = false;
+  renderChat();
+}
+
+/* ===================================================================
+   Tab switching
+   =================================================================== */
+const TAB_ORDER = ['analytics', 'inventory', 'chat', 'options'];
+
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === name));
+  positionPill(name);
+  if (name === 'inventory') loadInventory(); // cheap re-sync in case boot ran before the backend was ready
+}
+
+function positionPill(name) {
+  const idx = TAB_ORDER.indexOf(name);
+  const btn = document.querySelectorAll('.tab-btn')[idx];
+  const pill = document.getElementById('tab-pill');
+  pill.style.width = btn.offsetWidth + 'px';
+  pill.style.transform = `translateX(${btn.offsetLeft}px)`;
+}
+
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.tab-btn.is-active').dataset.tab;
+  positionPill(active);
+});
+
+/* ===================================================================
+   Mouse-wheel scrolling fix
+   ---------------------------------------------------------------
+   Some pywebview backends (notably the Windows WebView2/Edge shell)
+   don't reliably route wheel events into nested overflow:auto panes
+   the way a normal browser tab does, so scrolling with a mouse wheel
+   can silently do nothing over <main>. Forward the wheel delta to
+   whichever scrollable pane is actually visible right now.
+   =================================================================== */
+function activeScrollable() {
+  const openSheet = document.querySelector('.sheet-overlay.show .sheet');
+  if (openSheet) return openSheet;
+  const activePanel = document.querySelector('.panel.active');
+  if (!activePanel) return null;
+  return activePanel.querySelector(':scope > main') || activePanel;
+}
+
+window.addEventListener('wheel', (e) => {
+  const el = activeScrollable();
+  if (!el || el.scrollHeight <= el.clientHeight) return;
+  el.scrollTop += e.deltaY;
+}, { passive: true });
+
+/* ===================================================================
+   Boot
+   ---------------------------------------------------------------
+   pywebview injects window.pywebview asynchronously after the page
+   loads, and dispatches 'pywebviewready' once it's actually usable.
+   The naive `typeof pywebview !== 'undefined' ? ... : DOMContentLoaded`
+   check race-loses on some backends (notably Windows/WebView2): this
+   script can run before pywebview exists yet *and* after
+   DOMContentLoaded has already fired, so the DOMContentLoaded listener
+   below never runs and boot() is silently skipped — which is why
+   Inventory (and everything else) could sit empty until some other
+   action happened to trigger a reload. Cover all three cases: already
+   ready, the ready event fires later, or (belt-and-suspenders) neither
+   fires promptly, via a short poll.
+   =================================================================== */
+let _booted = false;
+function boot() {
+  if (_booted) return;
+  _booted = true;
+  positionPill('analytics');
+  loadApiKey();
+  renderChat();
+  loadInventory();
+}
+
+if (hasApi()) {
+  boot();
+} else {
+  window.addEventListener('pywebviewready', boot);
+  window.addEventListener('DOMContentLoaded', () => {
+    if (typeof pywebview === 'undefined') boot(); // no native shell at all — plain-HTML preview
+  });
+  let _bootTries = 0;
+  const _bootPoll = setInterval(() => {
+    if (hasApi() || ++_bootTries > 100) { // ~10s ceiling
+      clearInterval(_bootPoll);
+      boot();
+    }
+  }, 100);
+}
+</script>
+</body>
+</html>

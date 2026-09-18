@@ -55,21 +55,30 @@ class FrameGate:
         'ready': bool indicating whether the frame should be pushed into
         the full scan pipeline (§2).
         """
-        # Normalize to a fixed size first: the incoming frame's resolution
-        # can drift slightly between calls (camera renegotiation, canvas
-        # resize), and the motion-diff step requires two frames of
-        # identical shape.
-        frame_bgr = cv2.resize(frame_bgr, (320, 240))
-        gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (5, 5), 0)
+        gray_native = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+        gray_native = cv2.GaussianBlur(gray_native, (5, 5), 0)
+
+        # Blur variance is measured at native resolution — Laplacian
+        # variance is very sensitive to scale, and downscaling washes out
+        # the fine detail it depends on, making sharp frames read as blurry.
+        blur_var = self._blur_variance(gray_native)
+
+        # Motion-diff and edge-density are already scale-normalized (mean
+        # diff, fraction of pixels), so it's safe — and necessary, to avoid
+        # shape-mismatch crashes when the camera's native resolution drifts
+        # between calls — to compare them at a fixed canonical size.
+        gray = cv2.resize(gray_native, (320, 240))
 
         cfg = config.FRAME_GATE
         motion = self._motion_diff(gray)
-        blur_var = self._blur_variance(gray)
         edge_density = self._edge_density_central(gray)
 
         is_still = motion <= cfg["motion_diff_threshold"]
-        is_sharp = blur_var >= cfg["blur_var_threshold"]
+        # Temporarily bypassed (config.ENABLE_SHARPNESS_CHECK) — the blur
+        # check was gating out most frames in practice. blur_var is still
+        # computed and returned below so the GUI readout keeps working
+        # and this is easy to re-enable once retuned.
+        is_sharp = (not config.ENABLE_SHARPNESS_CHECK) or (blur_var >= cfg["blur_var_threshold"])
         has_object = edge_density >= cfg["min_edge_density"]
 
         if is_still and is_sharp and has_object:

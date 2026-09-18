@@ -17,7 +17,7 @@ import time
 import concurrent.futures
 
 from . import db, config
-from .qr_detector import resolve_qr
+from .qr_detector import resolve_code
 from .ocr_extractor import extract_text_blocks, normalize_and_match
 from .embedding import HistogramEmbedder
 from .index_store import SimilarityIndex
@@ -33,6 +33,7 @@ class ScanPipeline:
         self.embedder = embedder or HistogramEmbedder()
         self.index = SimilarityIndex()
         self._last_confirmed = {}  # product_id -> timestamp, for debounce (§6.2)
+        self._last_candidates_shown = {}  # top_candidate_id -> timestamp, see config.CANDIDATE_REDISPLAY_COOLDOWN_SECONDS
 
     # ---- §6.2 debounce ----
     def _debounced(self, product_id):
@@ -42,31 +43,64 @@ class ScanPipeline:
     def _mark_confirmed(self, product_id):
         self._last_confirmed[product_id] = time.time()
 
+    def _candidates_recently_shown(self, top_id):
+        last = self._last_candidates_shown.get(top_id)
+        return last is not None and (time.time() - last) < config.CANDIDATE_REDISPLAY_COOLDOWN_SECONDS
+
+    def _mark_candidates_shown(self, top_id):
+        self._last_candidates_shown[top_id] = time.time()
+
     def process_frame(self, frame_bgr, force=False):
         """
-        Runs one frame through the gate, then (if ready or forced) the full
-        cascade. Returns a result dict describing what happened, suitable
-        for the GUI layer to render directly.
+        Runs one frame through the cascade. QR/barcode detection is
+        deterministic and near-instant, so it runs on every frame
+        regardless of the stability/sharpness gate (§6.1) — requiring a
+        held-still frame before even trying to read a code just added
+        latency for no benefit, unlike the OCR/visual cascade below, which
+        genuinely does better on a settled frame. The gate is only
+        consulted once we fall through to that slower path.
         """
-        gate_result = self.gate.evaluate(frame_bgr)
-        if not gate_result["ready"] and not force:
-            return {"stage": "gate", "gate": gate_result, "outcome": None}
-
-        # --- Step 1: QR (deterministic, short-circuits everything) ---
-        product, qr_payload = resolve_qr(frame_bgr, db.find_product_by_qr_id)
+        # --- Step 1: QR sticker or real product barcode (deterministic,
+        # short-circuits everything, bypasses the frame-readiness gate) ---
+        product, code_payload, symbol_type = resolve_code(
+            frame_bgr, db.find_product_by_qr_id, db.find_product_by_barcode
+        )
         if product is not None:
+            match_path = "qr" if symbol_type == "QRCODE" else "barcode"
             if self._debounced(product["id"]):
-                return {"stage": "qr", "gate": gate_result, "outcome": "debounced", "product": product}
+                return {"stage": match_path, "gate": {"ready": True}, "outcome": "debounced", "product": product}
             self._mark_confirmed(product["id"])
-            db.log_scan(product["id"], "qr", 1.0, resolved_by_user=False)
+            db.log_scan(product["id"], match_path, 1.0, resolved_by_user=False)
             self.gate.reset()
             return {
-                "stage": "qr",
-                "gate": gate_result,
+                "stage": match_path,
+                "gate": {"ready": True},
                 "outcome": "auto_confirm",
                 "product": product,
                 "score": 1.0,
+                "code_type": symbol_type,
             }
+
+        # A code was read but doesn't match any known product yet (e.g. a
+        # fresh packet whose barcode hasn't been attached to anything in
+        # the catalogue) — surface that distinctly so the GUI can offer to
+        # attach it to a product, rather than silently falling through to
+        # the slower OCR/visual cascade with no explanation. Also bypasses
+        # the gate, for the same reason.
+        if code_payload is not None and symbol_type != "QRCODE":
+            return {
+                "stage": "barcode",
+                "gate": {"ready": True},
+                "outcome": "unknown_barcode",
+                "barcode": code_payload,
+                "code_type": symbol_type,
+            }
+
+        # --- Gate (§6.1): only from here on, since OCR/visual matching
+        # genuinely benefits from a held-still, in-focus frame ---
+        gate_result = self.gate.evaluate(frame_bgr)
+        if not gate_result["ready"] and not force:
+            return {"stage": "gate", "gate": gate_result, "outcome": None}
 
         # --- Steps 2 & 3 in parallel (spec explicitly requires this) ---
         ocr_future = _executor.submit(extract_text_blocks, frame_bgr)
@@ -75,11 +109,13 @@ class ScanPipeline:
         query_vector = embed_future.result()
 
         candidate_products = db.reference_ocr_texts()
-        ocr_match_id, ocr_confidence, _ambiguous = normalize_and_match(blocks, candidate_products)
+        ocr_match_id, ocr_confidence, _ambiguous, ocr_is_exact = normalize_and_match(blocks, candidate_products)
         visual_ranked = self.index.query(query_vector, k=config.TOP_K_CANDIDATES)
 
-        # --- Step 4: fusion scorer ---
-        scored = fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked)
+        # --- Step 4: fusion scorer (OCR is the highest-priority signal —
+        # an exact OCR match short-circuits the weighted blend, see
+        # fusion_scorer.fuse_candidates) ---
+        scored = fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked, ocr_is_exact=ocr_is_exact)
         decision, payload, best_score = decide(scored)
 
         result = {
@@ -87,6 +123,7 @@ class ScanPipeline:
             "gate": gate_result,
             "ocr_match_id": ocr_match_id,
             "ocr_confidence": ocr_confidence,
+            "ocr_is_exact": ocr_is_exact,
             "visual_ranked": visual_ranked,
             "score": best_score,
         }
@@ -104,6 +141,16 @@ class ScanPipeline:
             result["product"] = db.get_product(product_id)
 
         elif decision == "show_candidates":
+            top_id = payload[0][0] if payload else None
+            if top_id and self._candidates_recently_shown(top_id):
+                # Same top candidate we just showed (and the shopkeeper
+                # didn't pick, or dismissed it) — don't pop it right back
+                # up while the object just sits there; wait out the cooldown.
+                result["outcome"] = "debounced"
+                result["product"] = None
+                return result
+            if top_id:
+                self._mark_candidates_shown(top_id)
             result["outcome"] = "show_candidates"
             result["candidates"] = [
                 {**db.get_product(pid), "score": score} for pid, score in payload if db.get_product(pid)

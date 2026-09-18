@@ -24,7 +24,7 @@ def score_candidate(ocr_confidence, visual_similarity, size_variant_prior=0.0):
     return max(0.0, min(1.0, score))
 
 
-def fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked, size_prior_fn=None):
+def fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked, size_prior_fn=None, ocr_is_exact=False):
     """
     Merge OCR's single best guess with the embedding index's top-k ranked
     list into one set of per-product fused scores.
@@ -33,6 +33,12 @@ def fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked, size_prior_fn=N
     ocr_confidence: float       — 0-1
     visual_ranked: list[(product_id, similarity)] — from index_store.query
     size_prior_fn: optional callable(product_id) -> float in [0,1]
+    ocr_is_exact: bool          — from ocr_extractor.normalize_and_match.
+        OCR is the highest-priority signal per spec: when it reports an
+        (near-)exact text match, that candidate is pinned to
+        config.OCR_EXACT_MATCH_SCORE and sorted first, bypassing the
+        weighted blend entirely rather than letting a mediocre visual
+        score pull an obviously-correct OCR read back down.
 
     Returns: list[(product_id, final_score)] sorted descending.
     """
@@ -48,8 +54,11 @@ def fuse_candidates(ocr_match_id, ocr_confidence, visual_ranked, size_prior_fn=N
 
     scored = []
     for product_id, parts in candidates.items():
-        prior = size_prior_fn(product_id) if size_prior_fn else 0.0
-        final = score_candidate(parts["ocr"], parts["visual"], prior)
+        if ocr_is_exact and product_id == ocr_match_id:
+            final = config.OCR_EXACT_MATCH_SCORE
+        else:
+            prior = size_prior_fn(product_id) if size_prior_fn else 0.0
+            final = score_candidate(parts["ocr"], parts["visual"], prior)
         scored.append((product_id, final))
 
     scored.sort(key=lambda x: x[1], reverse=True)

@@ -14,14 +14,22 @@ per §10.3).
 """
 
 import re
+import os
 import shutil
 import pytesseract
 from rapidfuzz import fuzz, process
 
+from . import config
+
 UNIT_TOKENS = re.compile(r"\b\d+(\.\d+)?\s?(g|kg|ml|l|pcs|pack)\b", re.IGNORECASE)
 
-# Cache the availability check once — probing the binary on every frame is
-# both wasteful and (via subprocess) the slowest part of the hot path.
+# Common Windows install locations, checked as a fallback if PATH lookup fails
+# (e.g. a terminal opened before the installer updated PATH).
+_WINDOWS_FALLBACK_PATHS = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+]
+
 _TESSERACT_AVAILABLE = None
 _WARNED = False
 
@@ -29,17 +37,30 @@ _WARNED = False
 def _tesseract_available():
     global _TESSERACT_AVAILABLE, _WARNED
     if _TESSERACT_AVAILABLE is None:
-        _TESSERACT_AVAILABLE = shutil.which(pytesseract.pytesseract.tesseract_cmd) is not None \
-            or shutil.which("tesseract") is not None
+        found = shutil.which(pytesseract.pytesseract.tesseract_cmd) or shutil.which("tesseract")
+        if not found:
+            for candidate in _WINDOWS_FALLBACK_PATHS:
+                if os.path.isfile(candidate):
+                    pytesseract.pytesseract.tesseract_cmd = candidate
+                    found = candidate
+                    break
+        if not found:
+            # Last resort: ask pytesseract itself, which shells out directly
+            # rather than relying on shutil.which's PATH resolution.
+            try:
+                pytesseract.get_tesseract_version()
+                found = True
+            except Exception:
+                found = False
+        _TESSERACT_AVAILABLE = bool(found)
     if not _TESSERACT_AVAILABLE and not _WARNED:
         _WARNED = True
         print(
-            "[ocr_extractor] Tesseract binary not found on PATH — OCR step will be "
-            "skipped (fusion score falls back to embedding-only). Install it:\n"
-            "  Windows: https://github.com/UB-Mannheim/tesseract/wiki, then either add "
-            "the install dir to PATH or set pytesseract.pytesseract.tesseract_cmd.\n"
-            "  macOS:   brew install tesseract\n"
-            "  Linux:   sudo apt-get install tesseract-ocr"
+            "[ocr_extractor] Tesseract binary not found — OCR step will be skipped "
+            "(fusion score falls back to embedding-only).\n"
+            "If you just installed it, close and reopen your terminal (PATH changes "
+            "don't apply to already-open shells), or hardcode the path here:\n"
+            "  pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'"
         )
     return _TESSERACT_AVAILABLE
 
@@ -84,16 +105,22 @@ def normalize_and_match(blocks, candidate_products, size_dictionary=UNIT_TOKENS)
     candidate_products: list of {"id", "name", "brand"} from the local DB.
 
     Returns: (ocr_match_candidate_id: str|None, ocr_confidence: float 0-1,
-              ambiguous_candidates: list[(product_id, score)])
+              ambiguous_candidates: list[(product_id, score)], is_exact: bool)
+
+    is_exact is True when the best fuzzy score clears
+    config.OCR_EXACT_MATCH_THRESHOLD — i.e. OCR is confident enough that
+    this is a real (near-)literal text match, not just the closest of a
+    weak field. The fusion scorer treats that as the highest-priority
+    signal and short-circuits the weighted blend (see fusion_scorer.py).
     """
     if not blocks:
-        return None, 0.0, []
+        return None, 0.0, [], False
 
     full_text = " ".join(b["text"] for b in blocks)
     detected_sizes = size_dictionary.findall(full_text)  # noqa: informational, not scored here
 
     if not candidate_products:
-        return None, 0.0, []
+        return None, 0.0, [], False
 
     choices = {p["id"]: f'{p.get("brand", "")} {p["name"]}'.strip() for p in candidate_products}
     results = process.extract(full_text, choices, scorer=fuzz.token_set_ratio, limit=5)
@@ -102,12 +129,13 @@ def normalize_and_match(blocks, candidate_products, size_dictionary=UNIT_TOKENS)
     scored.sort(key=lambda x: x[1], reverse=True)
 
     if not scored:
-        return None, 0.0, []
+        return None, 0.0, [], False
 
     best_id, best_score = scored[0]
     ambiguous = [s for s in scored[1:3] if abs(s[1] - best_score) < 0.08]
+    is_exact = best_score >= config.OCR_EXACT_MATCH_THRESHOLD
 
-    return best_id, best_score, ambiguous
+    return best_id, best_score, ambiguous, is_exact
 
 
 def disambiguate_with_lm(full_text, ambiguous_candidates):
