@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS product (
     name TEXT NOT NULL,
     brand TEXT,
     size_variant TEXT,
-    price REAL,
+    price REAL,                       -- selling price (SP)
+    cost_price REAL,                  -- cost price (CP) — profit per unit = price - cost_price
     stock_qty INTEGER DEFAULT 0,
     qr_enabled INTEGER DEFAULT 0,
     category TEXT,
@@ -71,7 +72,9 @@ CREATE TABLE IF NOT EXISTS sale (
     id TEXT PRIMARY KEY,
     timestamp REAL,
     total REAL,
-    item_count INTEGER
+    item_count INTEGER,
+    product_names TEXT,                -- comma-separated product names in this sale, for a quick glance without a join
+    discount_amount REAL DEFAULT 0     -- rupees knocked off the pre-discount subtotal to reach `total`
 );
 
 CREATE TABLE IF NOT EXISTS sale_item (
@@ -110,6 +113,8 @@ def _migrate(conn):
         conn.execute("ALTER TABLE product ADD COLUMN category TEXT")
     if "barcode" not in cols:
         conn.execute("ALTER TABLE product ADD COLUMN barcode TEXT")
+    if "cost_price" not in cols:
+        conn.execute("ALTER TABLE product ADD COLUMN cost_price REAL")
     # Safe unconditionally: only reaches here once the column above is
     # guaranteed to exist, whether this DB was just created fresh or just
     # migrated from an older version.
@@ -118,6 +123,12 @@ def _migrate(conn):
     ref_cols = [r["name"] for r in conn.execute("PRAGMA table_info(product_reference_image)").fetchall()]
     if "ocr_blocks_json" not in ref_cols:
         conn.execute("ALTER TABLE product_reference_image ADD COLUMN ocr_blocks_json TEXT")
+
+    sale_cols = [r["name"] for r in conn.execute("PRAGMA table_info(sale)").fetchall()]
+    if "product_names" not in sale_cols:
+        conn.execute("ALTER TABLE sale ADD COLUMN product_names TEXT")
+    if "discount_amount" not in sale_cols:
+        conn.execute("ALTER TABLE sale ADD COLUMN discount_amount REAL DEFAULT 0")
 
 
 def init_db():
@@ -144,13 +155,13 @@ def cursor():
 # ---------- Product ----------
 
 def add_product(name, brand="", size_variant="", price=0.0, qr_enabled=False,
-                 category="", initial_stock=0, barcode=""):
+                 category="", initial_stock=0, barcode="", cost_price=0.0):
     pid = str(uuid.uuid4())
     with cursor() as cur:
         cur.execute(
-            "INSERT INTO product (id, name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode, last_image_update_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (pid, name, brand, size_variant, price, int(initial_stock), int(qr_enabled), category, barcode or None, time.time()),
+            "INSERT INTO product (id, name, brand, size_variant, price, cost_price, stock_qty, qr_enabled, category, barcode, last_image_update_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (pid, name, brand, size_variant, price, cost_price, int(initial_stock), int(qr_enabled), category, barcode or None, time.time()),
         )
     if initial_stock:
         with cursor() as cur:
@@ -203,7 +214,7 @@ def set_stock(product_id, quantity, source="manual"):
     return get_product(product_id)
 
 
-_PRODUCT_EDITABLE_FIELDS = {"name", "brand", "size_variant", "price", "qr_enabled", "category", "barcode"}
+_PRODUCT_EDITABLE_FIELDS = {"name", "brand", "size_variant", "price", "qr_enabled", "category", "barcode", "cost_price"}
 
 
 def update_product(product_id, **fields):
@@ -216,6 +227,8 @@ def update_product(product_id, **fields):
         updates["qr_enabled"] = int(bool(updates["qr_enabled"]))
     if "price" in updates:
         updates["price"] = float(updates["price"])
+    if "cost_price" in updates:
+        updates["cost_price"] = float(updates["cost_price"])
     set_clause = ", ".join(f"{k} = ?" for k in updates)
     with cursor() as cur:
         cur.execute(f"UPDATE product SET {set_clause} WHERE id = ?", (*updates.values(), product_id))
@@ -351,27 +364,33 @@ def recent_scan_logs(limit=50):
 
 # ---------- Sale / checkout ----------
 
-def create_sale(cart_items):
+def create_sale(cart_items, discount_amount=0.0):
     """
     cart_items: list of {"product_id", "quantity"} (quantity is however many
     units the shopkeeper scanned/added during this checkout).
 
-    Writes one Sale row, one SaleItem row per line, decrements stock, and
+    discount_amount: flat rupees knocked off the pre-discount subtotal
+    (the frontend converts a percentage discount to a flat amount before
+    calling this, since we only ever want one number of truth stored).
+
+    Writes one Sale row (including a comma-separated snapshot of the
+    product names in it, for a quick glance without a join, and the
+    discount applied), one SaleItem row per line, decrements stock, and
     writes a matching StockEvent per line so ScanLog/StockEvent stay the
     single source of truth for "what happened" while Sale/SaleItem is the
     friendlier read-shape for an invoice.
 
-    Returns the invoice dict: {id, timestamp, items: [...], total}.
+    Returns the invoice dict: {id, timestamp, items, subtotal, discount_amount, total}.
     """
     sale_id = str(uuid.uuid4())
     ts = time.time()
-    total = 0.0
+    subtotal = 0.0
     line_items = []
 
     with cursor() as cur:
         cur.execute(
-            "INSERT INTO sale (id, timestamp, total, item_count) VALUES (?, ?, 0, 0)",
-            (sale_id, ts),
+            "INSERT INTO sale (id, timestamp, total, item_count, product_names, discount_amount) VALUES (?, ?, 0, 0, '', ?)",
+            (sale_id, ts, float(discount_amount or 0)),
         )
         for entry in cart_items:
             product = get_product(entry["product_id"])
@@ -382,7 +401,7 @@ def create_sale(cart_items):
                 continue
             price = float(product.get("price") or 0.0)
             line_total = price * qty
-            total += line_total
+            subtotal += line_total
 
             cur.execute(
                 "INSERT INTO sale_item (id, sale_id, product_id, name_snapshot, price_snapshot, quantity) "
@@ -400,12 +419,20 @@ def create_sale(cart_items):
                 "price": price, "quantity": qty, "line_total": line_total,
             })
 
+        discount_amount = min(float(discount_amount or 0), subtotal)  # never let a discount push the total negative
+        total = subtotal - discount_amount
+        product_names = ", ".join(li["name"] for li in line_items)
+
         cur.execute(
-            "UPDATE sale SET total = ?, item_count = ? WHERE id = ?",
-            (total, sum(li["quantity"] for li in line_items), sale_id),
+            "UPDATE sale SET total = ?, item_count = ?, product_names = ?, discount_amount = ? WHERE id = ?",
+            (total, sum(li["quantity"] for li in line_items), product_names, discount_amount, sale_id),
         )
 
-    return {"id": sale_id, "timestamp": ts, "items": line_items, "total": total}
+    return {
+        "id": sale_id, "timestamp": ts, "items": line_items,
+        "subtotal": subtotal, "discount_amount": discount_amount, "total": total,
+        "product_names": product_names,
+    }
 
 
 def today_sales_summary():

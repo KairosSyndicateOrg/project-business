@@ -14,7 +14,12 @@ from . import db, config
 from .pipeline import ScanPipeline
 from .index_store import SimilarityIndex
 
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+# override=True: without it, python-dotenv refuses to overwrite a
+# GEMINI_API_KEY that's already set at the OS/user environment level (a
+# leftover from earlier testing, a global env var, etc.), and this file's
+# value silently loses — which looks exactly like "the app says my key is
+# wrong" even though the .env file itself is correct.
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"), override=True)
 
 
 def _decode_frame(data_url_or_b64):
@@ -33,7 +38,7 @@ class Api:
         self.pipeline = ScanPipeline()
 
     def get_gemini_api_key(self):
-        return os.getenv("GEMINI_API_KEY", "")
+        return (os.getenv("GEMINI_API_KEY", "") or "").strip()
 
     # ---------- Scanning ----------
 
@@ -60,11 +65,11 @@ class Api:
         pid = db.add_product(name, brand, size_variant, price=0.0, qr_enabled=bool(qr_enabled))
         return {"id": pid}
 
-    def add_product_full(self, name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode=""):
+    def add_product_full(self, name, brand, size_variant, price, cost_price, stock_qty, qr_enabled, category, barcode=""):
         """Used by the consumer GUI's Add Item sheet, which collects every field up front."""
         pid = db.add_product(
             name, brand, size_variant,
-            price=float(price or 0), qr_enabled=bool(qr_enabled),
+            price=float(price or 0), cost_price=float(cost_price or 0), qr_enabled=bool(qr_enabled),
             category=category or "", initial_stock=int(stock_qty or 0),
             barcode=(barcode or "").strip(),
         )
@@ -142,11 +147,11 @@ class Api:
         return _jsonable(db.set_stock(product_id, int(quantity), source="ai_chat"))
 
     def update_product(self, product_id, name=None, brand=None, size_variant=None,
-                        price=None, qr_enabled=None, category=None, barcode=None):
+                        price=None, qr_enabled=None, category=None, barcode=None, cost_price=None):
         """AI Chat tool: edit any product field except stock/adding new items."""
         return _jsonable(db.update_product(
             product_id, name=name, brand=brand, size_variant=size_variant,
-            price=price, qr_enabled=qr_enabled, category=category, barcode=barcode,
+            price=price, qr_enabled=qr_enabled, category=category, barcode=barcode, cost_price=cost_price,
         ))
 
     def delete_product(self, product_id):
@@ -176,15 +181,17 @@ class Api:
         self.pipeline.gate.reset()
         return {"ok": True}
 
-    def finalize_checkout(self, cart_items):
+    def finalize_checkout(self, cart_items, discount_amount=0.0):
         """
         cart_items: [{"product_id": str, "quantity": int}, ...] built up
-        client-side while scanning. Writes the Sale/SaleItem rows, adjusts
-        stock, and returns the invoice for the receipt screen.
+        client-side while scanning. discount_amount is a flat rupee amount
+        (the frontend converts a percent discount to rupees before calling
+        this). Writes the Sale/SaleItem rows, adjusts stock, and returns
+        the invoice for the receipt screen.
         """
         if not cart_items:
             return {"error": "cart is empty"}
-        invoice = db.create_sale(cart_items)
+        invoice = db.create_sale(cart_items, discount_amount=float(discount_amount or 0))
         return _jsonable(invoice)
 
     def today_sales_summary(self):

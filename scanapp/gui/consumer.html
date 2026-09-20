@@ -87,9 +87,15 @@
   }
   .head-action:active { background: var(--surface-soft); }
 
-  main { flex: 1; overflow-y: auto; padding: 0 18px 110px; -webkit-overflow-scrolling: touch; }
-  .panel { display: none; animation: fade-in .22s ease; }
-  .panel.active { display: block; }
+  main { flex: 1; overflow-y: auto; padding: 0 18px 110px; -webkit-overflow-scrolling: touch; min-height: 0; }
+  /* .panel must actually BE a flex container with a bounded height for
+     main's `flex:1` above to do anything — otherwise main just grows to
+     fit all its content (no internal overflow ever occurs) and anything
+     taller than the window gets silently clipped by #shell's
+     `overflow:hidden` instead of scrolling. This was the real bug behind
+     scrolling "not working": it was never a wheel-event problem. */
+  .panel { display: none; flex-direction: column; height: 100%; animation: fade-in .22s ease; }
+  .panel.active { display: flex; }
   @keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   /* ---------- shared card / list styles ---------- */
@@ -158,6 +164,34 @@
   .coming-soon-note p { margin: 0; font-size: 12.5px; color: var(--ink); font-weight: 600; line-height: 1.5; }
   .coming-soon-note svg { flex-shrink: 0; margin-top: 1px; }
 
+  /* -- AI-generated analytics widgets -- */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .analytics-grid .span-2 { grid-column: 1 / -1; }
+  .dash-square {
+    background: var(--surface); border-radius: var(--r-lg); padding: 16px; box-shadow: var(--shadow-card);
+    display: flex; flex-direction: column; justify-content: center; min-height: 108px;
+  }
+  .dash-square .dq-label { font-size: 12px; color: var(--ink-soft); font-weight: 700; margin-bottom: 8px; }
+  .dash-square .dq-value { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+  .dash-square .dq-delta { font-size: 12px; font-weight: 700; margin-top: 8px; }
+  .dash-square .dq-delta.pos { color: var(--sage); }
+  .dash-square .dq-delta.neg { color: var(--danger); }
+  .chart-card {
+    background: var(--surface); border-radius: var(--r-lg); padding: 16px 16px 14px; box-shadow: var(--shadow-card);
+  }
+  .chart-card .chart-title { font-size: 13px; font-weight: 700; color: var(--ink-soft); margin: 0 0 12px; }
+  .chart-card svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .chart-axis-label { font-size: 9px; fill: var(--ink-faint); font-weight: 600; }
+  .chart-value-label { font-size: 9px; fill: var(--ink-soft); font-weight: 700; }
+  .pie-wrap { display: flex; align-items: center; gap: 18px; }
+  .pie-wrap svg { width: 108px; height: 108px; flex-shrink: 0; }
+  .pie-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 0; }
+  .pie-legend .pl-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--ink); }
+  .pie-legend .pl-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .pie-legend .pl-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pie-legend .pl-pct { color: var(--ink-soft); font-weight: 700; flex-shrink: 0; }
+  .analytics-loading { text-align: center; padding: 30px 10px; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+
   /* ================= INVENTORY ================= */
   .sales-strip {
     display: flex; background: var(--surface); border-radius: var(--r-lg);
@@ -202,6 +236,7 @@
   }
   .inv-delete-btn:active { transform: scale(0.92); }
   .inv-price { font-weight: 800; font-size: 15px; }
+  .inv-cp { font-size: 10.5px; color: var(--ink-faint); font-weight: 600; margin-top: 2px; }
   .inv-stock { margin-top: 4px; }
 
   .empty-state { text-align: center; padding: 50px 20px; color: var(--ink-soft); }
@@ -250,9 +285,11 @@
   input:checked + .slider::before { transform: translateX(19px); }
 
   /* ================= AI CHAT ================= */
-  #chat-panel { display: none; flex-direction: column; height: 100%; }
-  #chat-panel.active { display: flex; }
-  #chat-panel main.chat-main { flex: 1; padding: 0 18px 18px; display: flex; flex-direction: column; }
+  /* No custom bottom padding here — let the shared `main` rule's 110px
+     bottom padding apply, same as every other tab, so the input bar
+     clears the floating tab-bar pill instead of sitting underneath it
+     (invisible) now that .panel fills the shell's full height. */
+  .chat-main { padding-left: 18px; padding-right: 18px; display: flex; flex-direction: column; min-height: 0; }
 
   .chat-empty { text-align: center; padding: 30px 10px 20px; }
   .chat-empty .glow {
@@ -269,7 +306,7 @@
   }
   .chip:active { background: var(--surface-soft); }
 
-  .msg-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 0 14px; }
+  .msg-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 0 14px; }
   .msg { max-width: 82%; padding: 11px 15px; font-size: 14px; font-weight: 500; line-height: 1.45; }
   .msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-radius: 18px 18px 4px 18px; }
   .msg.assistant { align-self: flex-start; background: var(--surface); color: var(--ink); border-radius: 18px 18px 18px 4px; box-shadow: var(--shadow-card); }
@@ -296,6 +333,7 @@
   .chat-input-bar {
     display: flex; align-items: center; gap: 8px; background: var(--surface);
     border-radius: var(--r-pill); padding: 6px 6px 6px 18px; box-shadow: var(--shadow-soft); flex-shrink: 0;
+    transform: translateY(-30px);
   }
   .chat-input-bar input { flex: 1; border: none; outline: none; background: transparent; font-size: 14.5px; font-weight: 600; color: var(--ink); }
   .chat-input-bar input::placeholder { color: var(--ink-faint); font-weight: 500; }
@@ -485,9 +523,19 @@
     border-radius: var(--r-pill); box-shadow: 0 16px 32px rgba(0,0,0,0.35); padding: 8px 8px 8px 18px;
     display: flex; align-items: center; gap: 10px; z-index: 6;
   }
-  .cart-count { font-size: 13px; font-weight: 700; flex: 1; }
+  .cart-count { font-size: 13px; font-weight: 700; flex: 1; cursor: pointer; }
   .cart-count b { font-weight: 800; }
+  .cart-discount-tag { display: block; font-size: 10.5px; color: var(--sage); font-weight: 700; margin-top: 1px; }
   .cart-bar .pill-btn { flex-shrink: 0; }
+
+  .discount-mode-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .discount-mode-btn {
+    flex: 1; padding: 10px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface-soft);
+    font-weight: 700; font-size: 13px; cursor: pointer; color: var(--ink);
+  }
+  .discount-mode-btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .discount-summary-row { display: flex; justify-content: space-between; padding: 4px 2px 14px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .discount-summary-row b { color: var(--sage); }
 
   /* -- invoice screen -- */
   .invoice-overlay {
@@ -520,16 +568,17 @@
   <!-- ============ ANALYTICS ============ -->
   <div class="panel active" id="panel-analytics">
     <header class="page-head">
-      <div><h1>Analytics</h1><div class="head-sub">Today, 17 September</div></div>
-      <div class="head-action" aria-label="Filter">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="17" x2="13" y2="17"/></svg>
+      <div><h1>Analytics</h1><div class="head-sub" id="analytics-head-sub">Today</div></div>
+      <div class="head-action" id="analytics-refresh-btn" onclick="runAnalyticsPlanner(true)" aria-label="Regenerate analytics">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       </div>
     </header>
     <main>
-      <div class="empty-state">
+      <div class="empty-state" id="analytics-empty">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#B7A695" stroke-width="1.6"><line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="15"/></svg>
-        <p>No sales data yet. Analytics will fill in once you've made a few checkouts.</p>
+        <p id="analytics-empty-text">No sales data yet. Analytics will fill in once you've made a few checkouts.</p>
       </div>
+      <div class="analytics-grid" id="analytics-widgets" style="display:none;"></div>
     </main>
   </div>
 
@@ -756,7 +805,10 @@
     <div class="cam-footer">
       <div class="scan-status-chip" id="scan-status-chip">Hold an item steady in frame</div>
       <div class="cart-bar">
-        <div class="cart-count"><b id="cart-item-count">0</b> items · <b id="cart-subtotal">₹0</b></div>
+        <div class="cart-count" onclick="openDiscountSheet()" role="button" aria-label="Add discount">
+          <b id="cart-item-count">0</b> items · <b id="cart-subtotal">₹0</b>
+          <span class="cart-discount-tag" id="cart-discount-tag" style="display:none;"></span>
+        </div>
         <button class="pill-btn secondary" onclick="closeCheckoutScanner()">Cancel</button>
         <button class="pill-btn" onclick="endCheckout()">End checkout</button>
       </div>
@@ -772,6 +824,8 @@
       <h2 class="invoice-title">Sale complete</h2>
       <div class="invoice-sub" id="invoice-timestamp">—</div>
       <div class="invoice-lines" id="invoice-lines"></div>
+      <div class="discount-summary-row" id="invoice-subtotal-row" style="display:none;"><span>Subtotal</span><span id="invoice-subtotal">₹0</span></div>
+      <div class="discount-summary-row" id="invoice-discount-row" style="display:none;"><span>Discount</span><b id="invoice-discount">-₹0</b></div>
       <div class="invoice-total-row"><span>Total</span><span id="invoice-total">₹0</span></div>
       <div class="invoice-id" id="invoice-id-line">—</div>
     </div>
@@ -794,8 +848,12 @@
         <div class="field"><label>Size / variant</label><input id="f-size" placeholder="e.g. 100g" /></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Price (₹)</label><input id="f-price" type="number" inputmode="decimal" placeholder="0" /></div>
-        <div class="field"><label>Stock quantity</label><input id="f-stock" type="number" inputmode="numeric" placeholder="0" /></div>
+        <div class="field"><label>Selling price / SP (₹)</label><input id="f-price" type="number" inputmode="decimal" placeholder="0" /></div>
+        <div class="field"><label>Cost price / CP (₹)</label><input id="f-cost" type="number" inputmode="decimal" placeholder="0" /></div>
+      </div>
+      <div class="field">
+        <label>Stock quantity</label>
+        <input id="f-stock" type="number" inputmode="numeric" placeholder="0" />
       </div>
       <div class="field">
         <label>Category</label>
@@ -823,6 +881,24 @@
       </div>
       <button class="pill-btn block" style="margin-top:14px;" onclick="saveNewItem()">Save &amp; add photos</button>
       <button class="pill-btn secondary block" style="margin-top:10px;" onclick="closeAddItemSheet()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ============ DISCOUNT SHEET (used at end of checkout) ============ -->
+  <div class="sheet-overlay" id="discount-overlay" onclick="if(event.target===this) closeDiscountSheet()">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2>Apply discount</h2>
+      <div class="discount-mode-row">
+        <button type="button" class="discount-mode-btn active" id="discount-mode-percent" onclick="setDiscountMode('percent')">% off</button>
+        <button type="button" class="discount-mode-btn" id="discount-mode-flat" onclick="setDiscountMode('flat')">₹ off</button>
+      </div>
+      <div class="field">
+        <label id="discount-value-label">Percent off</label>
+        <input id="f-discount-value" type="number" inputmode="decimal" placeholder="0" />
+      </div>
+      <button class="pill-btn block" style="margin-top:14px;" onclick="applyDiscount()">Apply</button>
+      <button class="pill-btn secondary block" style="margin-top:10px;" onclick="clearDiscount()">Clear discount</button>
     </div>
   </div>
 
@@ -943,6 +1019,7 @@ function renderInventory() {
       <div class="inv-right">
         <div class="inv-meta">
           <div class="inv-price">${money(p.price)}</div>
+          ${p.cost_price ? `<div class="inv-cp">CP ${money(p.cost_price)} · profit ${money(p.price - p.cost_price)}</div>` : ''}
           <div class="inv-stock"><span class="badge ${low ? 'low' : 'ok'}">${p.stock_qty ?? 0} in stock</span></div>
         </div>
         <button class="inv-delete-btn" aria-label="Delete item" data-id="${escapeHtml(p.id)}" data-name="${escapeHtml(p.name)}">
@@ -965,7 +1042,7 @@ function escapeHtml(s) {
 function openAddItemSheet() { document.getElementById('add-item-overlay').classList.add('show'); }
 function closeAddItemSheet() {
   document.getElementById('add-item-overlay').classList.remove('show');
-  ['f-name','f-brand','f-size','f-price','f-stock','f-barcode'].forEach(id => document.getElementById(id).value = '');
+  ['f-name','f-brand','f-size','f-price','f-cost','f-stock','f-barcode'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('f-qr').checked = false;
 }
 
@@ -975,6 +1052,7 @@ async function saveNewItem() {
   const brand = document.getElementById('f-brand').value.trim();
   const size_variant = document.getElementById('f-size').value.trim();
   const price = parseFloat(document.getElementById('f-price').value) || 0;
+  const cost_price = parseFloat(document.getElementById('f-cost').value) || 0;
   const stock_qty = parseInt(document.getElementById('f-stock').value, 10) || 0;
   const category = document.getElementById('f-category').value;
   const qr_enabled = document.getElementById('f-qr').checked;
@@ -983,12 +1061,12 @@ async function saveNewItem() {
   let newProductId = null;
   if (hasApi() && pywebview.api.add_product_full) {
     try {
-      const r = await pywebview.api.add_product_full(name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode);
+      const r = await pywebview.api.add_product_full(name, brand, size_variant, price, cost_price, stock_qty, qr_enabled, category, barcode);
       newProductId = r && r.id;
     } catch (e) { console.error(e); }
   } else {
     newProductId = 'local-' + Date.now();
-    inventory.push({ id: newProductId, name, brand, size_variant, price, stock_qty, qr_enabled, category, barcode });
+    inventory.push({ id: newProductId, name, brand, size_variant, price, cost_price, stock_qty, qr_enabled, category, barcode });
   }
   closeAddItemSheet();
   await loadInventory();
@@ -1166,14 +1244,25 @@ async function barcodeScanTick() {
 
 /* ---------- API key sheet ---------- */
 let geminiApiKey = '';
+let apiKeyLoadAttempts = 0;
 
 async function loadApiKey() {
+  const getKey = hasApi() && pywebview.api.get_gemini_api_key;
+  if (typeof getKey !== 'function') {
+    if (apiKeyLoadAttempts++ < 50) setTimeout(loadApiKey, 100);
+    return;
+  }
   try {
-    geminiApiKey = await pywebview.api.get_gemini_api_key();
+    const key = await getKey();
+    geminiApiKey = typeof key === 'string' ? key.trim() : '';
   } catch (e) {
-    geminiApiKey = '';
+    if (apiKeyLoadAttempts++ < 50) {
+      setTimeout(loadApiKey, 100);
+      return;
+    }
   }
   refreshKeyStatus();
+  runAnalyticsPlanner(false); // the AI decides what analytics to show as soon as we know the key is usable
 }
 
 function openApiKeySheet() {
@@ -1225,9 +1314,11 @@ let checkoutPaused = false;
 let cart = []; // [{product_id, name, price, quantity}]
 let pendingConfirm = null; // {product, score}
 let pendingQty = 1;
+let checkoutDiscount = { mode: 'percent', value: 0 }; // mode: 'percent' | 'flat' (rupees)
 
 async function openCheckoutScanner() {
   cart = [];
+  checkoutDiscount = { mode: 'percent', value: 0 }; // fresh checkout = fresh discount
   renderCartBar();
   document.getElementById('checkout-overlay').classList.add('show');
   hideConfirmCard();
@@ -1325,7 +1416,13 @@ function incrementConfirmQty() {
 }
 
 function decrementConfirmQty() {
-  pendingQty = Math.max(1, pendingQty - 1);
+  if (pendingQty <= 1) {
+    // Tapping "−" at 1 removes the selection entirely instead of just
+    // sitting at 1 — same as deciding not to add this item after all.
+    hideConfirmCard();
+    return;
+  }
+  pendingQty -= 1;
   document.getElementById('confirm-qty').innerText = pendingQty;
 }
 
@@ -1386,19 +1483,69 @@ function addToCart(product, qty) {
   showToast(`Added ${qty > 1 ? qty + '× ' : ''}${product.name}`);
 }
 
+function computeDiscountAmount(subtotal) {
+  if (!checkoutDiscount.value) return 0;
+  if (checkoutDiscount.mode === 'percent') return subtotal * Math.min(100, checkoutDiscount.value) / 100;
+  return Math.min(subtotal, checkoutDiscount.value);
+}
+
+function openDiscountSheet() {
+  document.getElementById('discount-mode-percent').classList.toggle('active', checkoutDiscount.mode === 'percent');
+  document.getElementById('discount-mode-flat').classList.toggle('active', checkoutDiscount.mode === 'flat');
+  document.getElementById('discount-value-label').innerText = checkoutDiscount.mode === 'percent' ? 'Percent off' : 'Amount off (₹)';
+  document.getElementById('f-discount-value').value = checkoutDiscount.value || '';
+  document.getElementById('discount-overlay').classList.add('show');
+}
+function closeDiscountSheet() { document.getElementById('discount-overlay').classList.remove('show'); }
+function setDiscountMode(mode) {
+  checkoutDiscount.mode = mode;
+  document.getElementById('discount-mode-percent').classList.toggle('active', mode === 'percent');
+  document.getElementById('discount-mode-flat').classList.toggle('active', mode === 'flat');
+  document.getElementById('discount-value-label').innerText = mode === 'percent' ? 'Percent off' : 'Amount off (₹)';
+}
+function applyDiscount() {
+  const v = parseFloat(document.getElementById('f-discount-value').value) || 0;
+  checkoutDiscount.value = Math.max(0, v);
+  closeDiscountSheet();
+  renderCartBar();
+}
+function clearDiscount() {
+  checkoutDiscount = { mode: 'percent', value: 0 };
+  document.getElementById('f-discount-value').value = '';
+  renderCartBar();
+  closeDiscountSheet();
+}
+
 function renderCartBar() {
   const count = cart.reduce((s, c) => s + c.quantity, 0);
   const subtotal = cart.reduce((s, c) => s + c.quantity * (c.price || 0), 0);
+  const discountAmount = computeDiscountAmount(subtotal);
+  const total = subtotal - discountAmount;
   document.getElementById('cart-item-count').innerText = count;
-  document.getElementById('cart-subtotal').innerText = money(subtotal);
+  document.getElementById('cart-subtotal').innerText = money(total);
+
+  const tag = document.getElementById('cart-discount-tag');
+  if (discountAmount > 0) {
+    const label = checkoutDiscount.mode === 'percent' ? `${checkoutDiscount.value}% off applied` : `${money(checkoutDiscount.value)} off applied`;
+    tag.innerText = label;
+    tag.style.display = 'block';
+  } else {
+    tag.style.display = 'none';
+  }
 }
 
 async function endCheckout() {
   if (!cart.length) { closeCheckoutScanner(); return; }
+  const subtotal = cart.reduce((s, c) => s + c.quantity * (c.price || 0), 0);
+  const discountAmount = computeDiscountAmount(subtotal);
+
   let invoice;
   if (hasApi() && pywebview.api.finalize_checkout) {
     try {
-      invoice = await pywebview.api.finalize_checkout(cart.map(c => ({ product_id: c.product_id, quantity: c.quantity })));
+      invoice = await pywebview.api.finalize_checkout(
+        cart.map(c => ({ product_id: c.product_id, quantity: c.quantity })),
+        discountAmount
+      );
     } catch (e) { console.error(e); }
   }
   if (!invoice) {
@@ -1407,7 +1554,7 @@ async function endCheckout() {
       id: 'local-' + Date.now(),
       timestamp: Date.now() / 1000,
       items: cart.map(c => ({ name: c.name, price: c.price, quantity: c.quantity, line_total: c.price * c.quantity })),
-      total: cart.reduce((s, c) => s + c.quantity * c.price, 0),
+      subtotal, discount_amount: discountAmount, total: subtotal - discountAmount,
     };
   }
   closeCheckoutScanner();
@@ -1424,6 +1571,14 @@ function showInvoice(invoice) {
     row.innerHTML = `<div><div class="ln">${escapeHtml(it.name)}</div><div class="ld">${it.quantity} × ${money(it.price)}</div></div><div class="lp">${money(it.line_total)}</div>`;
     list.appendChild(row);
   });
+
+  const hasDiscount = (invoice.discount_amount || 0) > 0;
+  document.getElementById('invoice-subtotal-row').style.display = hasDiscount ? 'flex' : 'none';
+  document.getElementById('invoice-discount-row').style.display = hasDiscount ? 'flex' : 'none';
+  if (hasDiscount) {
+    document.getElementById('invoice-subtotal').innerText = money(invoice.subtotal ?? invoice.total);
+    document.getElementById('invoice-discount').innerText = '-' + money(invoice.discount_amount);
+  }
   document.getElementById('invoice-total').innerText = money(invoice.total);
   const d = new Date((invoice.timestamp || Date.now() / 1000) * 1000);
   document.getElementById('invoice-timestamp').innerText = d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -1483,7 +1638,7 @@ const CHAT_TOOLS = [{
     },
     {
       name: 'update_product',
-      description: 'Edit an existing product\'s details — name, brand, size/variant, price, category, barcode, or whether it is QR-enabled. Only include the fields being changed. Cannot create new products.',
+      description: 'Edit an existing product\'s details — name, brand, size/variant, selling price, cost price, category, barcode, or whether it is QR-enabled. Only include the fields being changed. Cannot create new products.',
       parameters: {
         type: 'object',
         properties: {
@@ -1491,7 +1646,8 @@ const CHAT_TOOLS = [{
           name: { type: 'string' },
           brand: { type: 'string' },
           size_variant: { type: 'string' },
-          price: { type: 'number' },
+          price: { type: 'number', description: 'Selling price (SP)' },
+          cost_price: { type: 'number', description: 'Cost price (CP) — what the shop paid per unit; profit per unit is price minus this' },
           category: { type: 'string' },
           qr_enabled: { type: 'boolean' },
           barcode: { type: 'string' },
@@ -1522,7 +1678,7 @@ async function runChatTool(name, args) {
       case 'update_product':
         return await pywebview.api.update_product(
           args.product_id, args.name, args.brand, args.size_variant,
-          args.price, args.qr_enabled, args.category, args.barcode
+          args.price, args.qr_enabled, args.category, args.barcode, args.cost_price
         );
       default:
         return { error: `Unknown tool: ${name}` };
@@ -1576,10 +1732,379 @@ function sendSuggested(text) {
 }
 
 function buildShopContext() {
-  const lines = inventory.map(p =>
-    `- ${p.name} (${p.brand || 'no brand'}, ${p.size_variant || ''}): ₹${p.price}, ${p.stock_qty} in stock`
-  );
+  const lines = inventory.map(p => {
+    const cp = p.cost_price ? `, CP ₹${p.cost_price} (profit ₹${(p.price - p.cost_price).toFixed(2)}/unit)` : '';
+    return `- ${p.name} (${p.brand || 'no brand'}, ${p.size_variant || ''}): SP ₹${p.price}${cp}, ${p.stock_qty} in stock`;
+  });
   return lines.length ? lines.join('\n') : 'No items in inventory yet.';
+}
+
+/* ===================================================================
+   Analytics dashboard — four widget "tools" (bar chart, line chart,
+   pie chart, dashboard-square KPI tile) that Gemini decides among when
+   the app launches, based on the shop's real sales/inventory data. The
+   AI never invents chart data itself — it's told to only use figures
+   derivable from the context it's given — it just picks which of these
+   rendering tools best represent that data and calls them (0 or more
+   times each). Each widget is drawn with plain inline SVG, no charting
+   library, so the whole thing stays a single self-contained HTML file.
+   =================================================================== */
+const ANALYTICS_PALETTE = ['#B5642F', '#6F8863', '#C98A4B', '#8FA37E', '#D9A15C', '#4F6B47'];
+
+const ANALYTICS_TOOLS = [{
+  function_declarations: [
+    {
+      name: 'render_bar_chart',
+      description: 'Renders a bar chart comparing values across categories — good for things like revenue or units by product, or sales by day.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          x_labels: { type: 'array', items: { type: 'string' }, description: 'One label per category, e.g. product names or dates' },
+          series: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                values: { type: 'array', items: { type: 'number' }, description: 'One number per x_labels entry, same length and order' },
+              },
+              required: ['values'],
+            },
+          },
+        },
+        required: ['title', 'x_labels', 'series'],
+      },
+    },
+    {
+      name: 'render_line_chart',
+      description: 'Renders a line chart for a trend over an ordered sequence, e.g. revenue over the last several days.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          x_labels: { type: 'array', items: { type: 'string' } },
+          series: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                values: { type: 'array', items: { type: 'number' } },
+              },
+              required: ['values'],
+            },
+          },
+        },
+        required: ['title', 'x_labels', 'series'],
+      },
+    },
+    {
+      name: 'render_pie_chart',
+      description: 'Renders a pie/donut chart showing how a total splits across categories, e.g. stock or sales share by category.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          labels: { type: 'array', items: { type: 'string' } },
+          values: { type: 'array', items: { type: 'number' }, description: 'Same length/order as labels; shown as a share of their total' },
+        },
+        required: ['title', 'labels', 'values'],
+      },
+    },
+    {
+      name: 'render_dashboard_square',
+      description: 'Renders a small KPI tile: one big central value plus one short line of context underneath, shown in green (good/positive) or red (needs attention). Use this for headline numbers like today\'s revenue, units sold, or items low on stock.',
+      parameters: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', description: 'Short label shown above the value, e.g. "Revenue today"' },
+          value: { type: 'string', description: 'The big number/quantity, already formatted, e.g. "₹1,240", "18", "3 items"' },
+          delta_text: { type: 'string', description: 'Short context line shown below, e.g. "+12% vs yesterday" or "5 items running low"' },
+          delta_positive: { type: 'boolean', description: 'true = green (good news), false = red (needs attention)' },
+        },
+        required: ['label', 'value', 'delta_text', 'delta_positive'],
+      },
+    },
+  ],
+}];
+
+function svgEl(tag, attrs, children) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => el.setAttribute(k, v));
+  (children || []).forEach(c => el.appendChild(c));
+  return el;
+}
+
+function analyticsCardShell(title, spanFull) {
+  const card = document.createElement('div');
+  card.className = 'chart-card' + (spanFull ? ' span-2' : '');
+  const h = document.createElement('p');
+  h.className = 'chart-title';
+  h.innerText = title || '';
+  card.appendChild(h);
+  return card;
+}
+
+function renderDashboardSquareWidget(args) {
+  const el = document.createElement('div');
+  el.className = 'dash-square';
+  el.innerHTML = `
+    <div class="dq-label">${escapeHtml(args.label || '')}</div>
+    <div class="dq-value">${escapeHtml(String(args.value ?? ''))}</div>
+    <div class="dq-delta ${args.delta_positive ? 'pos' : 'neg'}">${args.delta_positive ? '↑' : '●'} ${escapeHtml(args.delta_text || '')}</div>`;
+  return el;
+}
+
+function renderBarChartWidget(args) {
+  const card = analyticsCardShell(args.title, true);
+  const labels = args.x_labels || [];
+  const series = (args.series || []).filter(s => s && s.values && s.values.length);
+  if (!labels.length || !series.length) { card.appendChild(Object.assign(document.createElement('div'), { innerText: 'Not enough data' })); return card; }
+
+  const W = 320, H = 170, padL = 6, padR = 6, padB = 22, padT = 10;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...series.flatMap(s => s.values));
+  const groupW = plotW / labels.length;
+  const barW = Math.max(4, (groupW * 0.62) / series.length);
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}` });
+  svg.appendChild(svgEl('line', { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, stroke: 'var(--line)', 'stroke-width': 1 }));
+
+  labels.forEach((label, i) => {
+    const groupX = padL + i * groupW + (groupW - barW * series.length) / 2;
+    series.forEach((s, si) => {
+      const val = s.values[i] || 0;
+      const barH = (val / maxVal) * plotH;
+      const x = groupX + si * barW;
+      const y = H - padB - barH;
+      svg.appendChild(svgEl('rect', {
+        x: x.toFixed(1), y: y.toFixed(1), width: (barW - 2).toFixed(1), height: Math.max(1, barH).toFixed(1),
+        rx: 3, fill: ANALYTICS_PALETTE[si % ANALYTICS_PALETTE.length],
+      }));
+    });
+    const labelText = svgEl('text', { x: (padL + i * groupW + groupW / 2).toFixed(1), y: H - 8, 'text-anchor': 'middle', class: 'chart-axis-label' });
+    labelText.textContent = label.length > 8 ? label.slice(0, 7) + '…' : label;
+    svg.appendChild(labelText);
+  });
+  card.appendChild(svg);
+  if (series.length > 1 && series.some(s => s.name)) card.appendChild(buildChartLegend(series));
+  return card;
+}
+
+function renderLineChartWidget(args) {
+  const card = analyticsCardShell(args.title, true);
+  const labels = args.x_labels || [];
+  const series = (args.series || []).filter(s => s && s.values && s.values.length);
+  if (!labels.length || !series.length) { card.appendChild(Object.assign(document.createElement('div'), { innerText: 'Not enough data' })); return card; }
+
+  const W = 320, H = 170, padL = 6, padR = 6, padB = 22, padT = 10;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const allVals = series.flatMap(s => s.values);
+  const maxVal = Math.max(...allVals, 0.0001);
+  const minVal = Math.min(0, ...allVals);
+  const range = (maxVal - minVal) || 1;
+  const xStep = labels.length > 1 ? plotW / (labels.length - 1) : 0;
+
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}` });
+  svg.appendChild(svgEl('line', { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, stroke: 'var(--line)', 'stroke-width': 1 }));
+
+  series.forEach((s, si) => {
+    const points = s.values.map((v, i) => {
+      const x = padL + i * xStep;
+      const y = padT + plotH - ((v - minVal) / range) * plotH;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    svg.appendChild(svgEl('polyline', {
+      points, fill: 'none', stroke: ANALYTICS_PALETTE[si % ANALYTICS_PALETTE.length],
+      'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    }));
+  });
+  labels.forEach((label, i) => {
+    if (labels.length > 7 && i % Math.ceil(labels.length / 6) !== 0) return; // thin out labels so they don't overlap
+    const t = svgEl('text', { x: (padL + i * xStep).toFixed(1), y: H - 8, 'text-anchor': 'middle', class: 'chart-axis-label' });
+    t.textContent = label.length > 8 ? label.slice(0, 7) + '…' : label;
+    svg.appendChild(t);
+  });
+  card.appendChild(svg);
+  if (series.length > 1 && series.some(s => s.name)) card.appendChild(buildChartLegend(series));
+  return card;
+}
+
+function buildChartLegend(series) {
+  const legend = document.createElement('div');
+  legend.className = 'chart-legend';
+  series.forEach((s, i) => {
+    const span = document.createElement('span');
+    span.innerHTML = `<span class="legend-dot" style="background:${ANALYTICS_PALETTE[i % ANALYTICS_PALETTE.length]}"></span>${escapeHtml(s.name || 'Series ' + (i + 1))}`;
+    legend.appendChild(span);
+  });
+  return legend;
+}
+
+function renderPieChartWidget(args) {
+  const card = analyticsCardShell(args.title, false);
+  const labels = args.labels || [];
+  const values = (args.values || []).map(v => Math.max(0, Number(v) || 0));
+  const total = values.reduce((a, b) => a + b, 0);
+  if (!labels.length || total <= 0) { card.appendChild(Object.assign(document.createElement('div'), { innerText: 'Not enough data' })); return card; }
+
+  const r = 50, cx = 60, cy = 60, circumference = 2 * Math.PI * r;
+  const svg = svgEl('svg', { viewBox: '0 0 120 120' });
+  const group = svgEl('g', { transform: `rotate(-90 ${cx} ${cy})` });
+  svg.appendChild(svgEl('circle', { cx, cy, r, fill: 'none', stroke: 'var(--surface-soft)', 'stroke-width': 20 }));
+
+  let cumulative = 0;
+  const wrap = document.createElement('div');
+  wrap.className = 'pie-wrap';
+  const legendEl = document.createElement('div');
+  legendEl.className = 'pie-legend';
+
+  labels.forEach((label, i) => {
+    const val = values[i] || 0;
+    const frac = val / total;
+    const segLen = frac * circumference;
+    const circle = svgEl('circle', {
+      cx, cy, r, fill: 'none', stroke: ANALYTICS_PALETTE[i % ANALYTICS_PALETTE.length], 'stroke-width': 20,
+      'stroke-dasharray': `${segLen.toFixed(2)} ${(circumference - segLen).toFixed(2)}`,
+      'stroke-dashoffset': (-cumulative).toFixed(2),
+    });
+    group.appendChild(circle);
+    cumulative += segLen;
+
+    const row = document.createElement('div');
+    row.className = 'pl-row';
+    row.innerHTML = `<span class="pl-dot" style="background:${ANALYTICS_PALETTE[i % ANALYTICS_PALETTE.length]}"></span>` +
+      `<span class="pl-name">${escapeHtml(label)}</span><span class="pl-pct">${Math.round(frac * 100)}%</span>`;
+    legendEl.appendChild(row);
+  });
+  svg.appendChild(group);
+  wrap.appendChild(svg);
+  wrap.appendChild(legendEl);
+  card.appendChild(wrap);
+  return card;
+}
+
+function renderAnalyticsWidget(name, args) {
+  const widgetsEl = document.getElementById('analytics-widgets');
+  let el;
+  if (name === 'render_dashboard_square') el = renderDashboardSquareWidget(args);
+  else if (name === 'render_bar_chart') el = renderBarChartWidget(args);
+  else if (name === 'render_line_chart') el = renderLineChartWidget(args);
+  else if (name === 'render_pie_chart') el = renderPieChartWidget(args);
+  else return;
+  widgetsEl.appendChild(el);
+}
+
+function buildAnalyticsContext(sales, inv, recentSalesList) {
+  const lines = [];
+  lines.push(`Today's revenue: ₹${sales.revenue || 0}, units sold: ${sales.units || 0}.`);
+  const lowStock = (inv || []).filter(p => (p.stock_qty ?? 0) < 5);
+  lines.push(`${inv.length} products tracked; ${lowStock.length} below 5 units in stock` + (lowStock.length ? `: ${lowStock.map(p => `${p.name} (${p.stock_qty})`).join(', ')}.` : '.'));
+
+  const byCategory = {};
+  (inv || []).forEach(p => { const c = p.category || 'Uncategorised'; byCategory[c] = (byCategory[c] || 0) + 1; });
+  const catLines = Object.entries(byCategory).map(([c, n]) => `${c}: ${n} item${n === 1 ? '' : 's'}`);
+  if (catLines.length) lines.push(`Inventory by category — ${catLines.join(', ')}.`);
+
+  if (recentSalesList && recentSalesList.length) {
+    lines.push(`Last ${recentSalesList.length} sales (most recent first): ` +
+      recentSalesList.slice(0, 15).map(s => {
+        const d = new Date((s.timestamp || 0) * 1000);
+        return `${d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })} ₹${s.total}`;
+      }).join('; ') + '.');
+  } else {
+    lines.push('No completed sales recorded yet.');
+  }
+
+  const topStock = [...(inv || [])].sort((a, b) => (b.stock_qty || 0) - (a.stock_qty || 0)).slice(0, 6);
+  if (topStock.length) lines.push(`Highest-stock items: ${topStock.map(p => `${p.name} (${p.stock_qty})`).join(', ')}.`);
+
+  return lines.join('\n');
+}
+
+async function runAnalyticsPlanner(manual) {
+  const emptyEl = document.getElementById('analytics-empty');
+  const emptyText = document.getElementById('analytics-empty-text');
+  const widgetsEl = document.getElementById('analytics-widgets');
+
+  function showEmpty(msg) {
+    emptyText.innerText = msg;
+    emptyEl.style.display = 'block';
+    widgetsEl.style.display = 'none';
+    widgetsEl.innerHTML = '';
+  }
+
+  if (!geminiApiKey) {
+    showEmpty('Connect your Gemini API key (via the .env file) to generate analytics.');
+    return;
+  }
+  if (!hasApi()) { showEmpty("No sales data yet. Analytics will fill in once you've made a few checkouts."); return; }
+
+  if (manual) {
+    emptyEl.style.display = 'none';
+    widgetsEl.style.display = 'none';
+    showToast('Regenerating analytics…');
+  }
+
+  let sales = { revenue: 0, units: 0 }, inv = [], recentSalesList = [];
+  try {
+    sales = (await pywebview.api.today_sales_summary()) || sales;
+    inv = (await pywebview.api.list_products()) || [];
+    if (pywebview.api.recent_sales) recentSalesList = (await pywebview.api.recent_sales()) || [];
+  } catch (e) { /* fall through with whatever defaults we have */ }
+
+  if (!sales.revenue && !recentSalesList.length && !inv.length) {
+    showEmpty("No sales data yet. Analytics will fill in once you've made a few checkouts.");
+    return;
+  }
+
+  const context = buildAnalyticsContext(sales, inv, recentSalesList);
+  const systemContext =
+    "You are choosing which analytics widgets to show a shopkeeper on their Analytics tab, based on the real " +
+    "shop data below. Call between 1 and 6 of the available rendering tools to build a useful, varied dashboard " +
+    "— mix chart types where the data supports it rather than defaulting to one type, and prefer a couple of " +
+    "dashboard-square KPIs plus one or two charts over many of the same type. Only use figures that are directly " +
+    "derivable from the data given — never invent numbers. If the data is too thin for a chart type (e.g. only one " +
+    "data point), skip it and use dashboard squares instead. Do not reply with text, only call tools.\n\n" +
+    "Shop data:\n" + context;
+
+  let data;
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemContext }] },
+          tools: ANALYTICS_TOOLS,
+          tool_config: { function_calling_config: { mode: 'ANY' } },
+          contents: [{ role: 'user', parts: [{ text: 'Build the analytics dashboard now.' }] }],
+        }),
+      }
+    );
+    data = await resp.json();
+    if (!resp.ok) throw new Error((data && data.error && data.error.message) || `Request failed (${resp.status})`);
+  } catch (e) {
+    showEmpty("Couldn't generate analytics: " + (e.message || e));
+    return;
+  }
+
+  const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+  const calls = parts.filter(p => p.functionCall);
+  if (!calls.length) {
+    showEmpty("No sales data yet. Analytics will fill in once you've made a few checkouts.");
+    return;
+  }
+
+  widgetsEl.innerHTML = '';
+  calls.forEach(c => {
+    try { renderAnalyticsWidget(c.functionCall.name, c.functionCall.args || {}); }
+    catch (e) { console.error('Widget render failed', c.functionCall.name, e); }
+  });
+  emptyEl.style.display = 'none';
+  widgetsEl.style.display = 'grid';
 }
 
 let apiTurns = [];
@@ -1660,7 +2185,7 @@ async function sendChat() {
           }
           responseParts.push({ functionResponse: { name: name, response: { result: result } } });
         }
-        apiTurns.push({ role: 'function', parts: responseParts });
+        apiTurns.push({ role: 'model', parts: responseParts });
         await loadInventory();
         continue;
       }
@@ -1706,29 +2231,6 @@ window.addEventListener('resize', () => {
 });
 
 /* ===================================================================
-   Mouse-wheel scrolling fix
-   ---------------------------------------------------------------
-   Some pywebview backends (notably the Windows WebView2/Edge shell)
-   don't reliably route wheel events into nested overflow:auto panes
-   the way a normal browser tab does, so scrolling with a mouse wheel
-   can silently do nothing over <main>. Forward the wheel delta to
-   whichever scrollable pane is actually visible right now.
-   =================================================================== */
-function activeScrollable() {
-  const openSheet = document.querySelector('.sheet-overlay.show .sheet');
-  if (openSheet) return openSheet;
-  const activePanel = document.querySelector('.panel.active');
-  if (!activePanel) return null;
-  return activePanel.querySelector(':scope > main') || activePanel;
-}
-
-window.addEventListener('wheel', (e) => {
-  const el = activeScrollable();
-  if (!el || el.scrollHeight <= el.clientHeight) return;
-  el.scrollTop += e.deltaY;
-}, { passive: true });
-
-/* ===================================================================
    Boot
    ---------------------------------------------------------------
    pywebview injects window.pywebview asynchronously after the page
@@ -1748,6 +2250,8 @@ function boot() {
   if (_booted) return;
   _booted = true;
   positionPill('analytics');
+  const subEl = document.getElementById('analytics-head-sub');
+  if (subEl) subEl.innerText = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
   loadApiKey();
   renderChat();
   loadInventory();

@@ -2,4 +2,5 @@ __pycache__/
 *.py[cod]
 *$py.class
 scan_app.db
+*.sql
 .env
