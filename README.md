@@ -4,6 +4,7 @@ An Android based AI powered inventory management system for small shops
 ## Setup
 
     pip install -r requirements.txt
+    # On Windows, install tesseract OCR manually and add to PATH. Restart terminal before continuing
     # Debian/Ubuntu also needs the tesseract binary:
     sudo apt-get install tesseract-ocr
 
